@@ -5,8 +5,8 @@ import KeycloakProvider from "next-auth/providers/keycloak";
 export const authOptions: AuthOptions = {
   providers: [
     KeycloakProvider({
-      clientId: "taskforge360-client",
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
+      clientId: process.env.KEYCLOAK_ID!,
+      clientSecret: process.env.KEYCLOAK_SECRET!,
       issuer: "http://localhost:8080/realms/taskforge360",
       authorization: {
         params: {
