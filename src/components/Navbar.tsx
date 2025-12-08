@@ -8,6 +8,7 @@ import UserInfo from './UserInfo';
 // Map of links to display in the navbar
 const navLinks = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Projects', href: '/projects', icon: CheckSquare }, // Reusing CheckSquare or finding a better one? The user didn't specify an icon, reusing fits or let's use LayoutList if available, but CheckSquare is fine or maybe 'Folder'.
     { name: 'Tasks', href: '/tasks', icon: CheckSquare },
     { name: 'Team', href: '/team', icon: Users },
     { name: 'Settings', href: '/settings', icon: Settings },
