@@ -7,7 +7,7 @@ export const authOptions: AuthOptions = {
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_ID!,
       clientSecret: process.env.KEYCLOAK_SECRET!,
-      issuer: "http://localhost:8080/realms/taskforge360",
+      issuer: process.env.KEYCLOAK_ISSUER!,
       authorization: {
         params: {
           scope: "openid profile email",
@@ -24,11 +24,23 @@ export const authOptions: AuthOptions = {
     error: "/login", // Show errors on the login page
   },
   callbacks: {
-    async jwt({ token, user }) {
-      return { ...token, ...user };
+    async jwt({ token, account, user }) {
+      // Initial sign in
+      if (account && user) {
+        return {
+          ...token,
+          accessToken: account.access_token,
+          id: user.id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          username: (user as any).preferred_username || user.name
+        };
+      }
+      return token;
     },
     async session({ session, token }) {
-      session.user = token as any;
+      session.accessToken = token.accessToken as string;
+      session.user.id = token.id as string;
+      session.user.username = token.username as string;
       return session;
     },
     async redirect({ url, baseUrl }) {
