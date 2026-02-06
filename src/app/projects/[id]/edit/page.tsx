@@ -39,9 +39,28 @@ export default function EditProjectPage({ params }: PageProps) {
         }
     }, [projectId, router]);
 
-    const handleUpdate = async (data: any) => {
+    const handleUpdate = async (data: any, users?: import('@/types').UserSearchResult[]) => {
         if (!projectId) return;
+
+        // 1. Update project details
         await projectService.update(projectId, data as UpdateProjectDto);
+
+        // 2. Handle user assignments if users are provided
+        if (users && project && project.projectUsers) {
+            const currentIds = project.projectUsers.map(u => u.userId);
+            const newIds = users.map(u => u.id);
+
+            // Find users to add
+            const toAdd = users.filter(u => !currentIds.includes(u.id));
+
+            // Find users to remove
+            const toRemove = project.projectUsers.filter(u => !newIds.includes(u.userId));
+
+            await Promise.all([
+                ...toAdd.map(u => projectService.assignUser(projectId, u.id)),
+                ...toRemove.map(u => projectService.removeUser(projectId, u.userId))
+            ]);
+        }
     };
 
     if (isLoading) {

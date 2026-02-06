@@ -25,5 +25,29 @@ export const projectService = {
         await api.put(`/api/Projects/${id}`, project);
     },
 
-    // Add delete if needed later, though not explicitly requested in "create, list, update"
+    searchUsers: async (term: string): Promise<import('@/types').UserSearchResult[]> => {
+        if (term.length < 3) return [];
+        const response = await api.get<import('@/types').UserSearchResult[]>('/api/Users/search', {
+            params: { q: term } // Changed 'search' to 'q' based on Swagger documentation
+        });
+        return response.data;
+    },
+
+    assignUser: async (projectId: number, userId: string): Promise<void> => {
+        await api.post(`/api/Projects/${projectId}/users`, { userIds: [userId] });
+    },
+
+    removeUser: async (projectId: number, userId: string): Promise<void> => {
+        // Try path parameter first as it adheres to standard REST
+        await api.delete(`/api/Projects/${projectId}/users/${userId}`);
+    },
+
+    getProjectUsers: async (projectId: number): Promise<import('@/types').UserSearchResult[]> => {
+        const response = await api.get<import('@/types').UserSearchResult[]>(`/api/Projects/${projectId}/users`);
+        return response.data;
+    },
+
+    delete: async (id: number): Promise<void> => {
+        await api.delete(`/api/Projects/${id}`);
+    },
 };

@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreateProjectDto, Project, UpdateProjectDto } from '@/types';
+import { CreateProjectDto, Project, UpdateProjectDto, UserSearchResult } from '@/types';
 import { Loader2, Save, X } from 'lucide-react';
+import UserAssigner from './UserAssigner';
 
 interface ProjectFormProps {
     initialData?: Project;
-    onSubmit: (data: CreateProjectDto | UpdateProjectDto) => Promise<void>;
+    onSubmit: (data: CreateProjectDto | UpdateProjectDto, users?: UserSearchResult[]) => Promise<void>;
     isOrdering?: boolean;
 }
 
@@ -19,6 +20,7 @@ export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps)
         description: '',
         sprintDurationDays: 14,
     });
+    const [selectedUsers, setSelectedUsers] = useState<UserSearchResult[]>([]);
 
     useEffect(() => {
         if (initialData) {
@@ -27,6 +29,17 @@ export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps)
                 description: initialData.description,
                 sprintDurationDays: initialData.sprintDurationDays,
             });
+
+            // Populate selected users if available in initialData
+            if (initialData.projectUsers) {
+                const initialUsers: UserSearchResult[] = initialData.projectUsers.map(pu => ({
+                    id: pu.userId,
+                    username: pu.userName || '', // Fallback or assume populated
+                    displayName: pu.displayName || pu.userName || 'Unknown User',
+                    email: pu.email || ''
+                }));
+                setSelectedUsers(initialUsers);
+            }
         }
     }, [initialData]);
 
@@ -35,18 +48,34 @@ export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps)
         setIsSubmitting(true);
         try {
             if (initialData) {
-                await onSubmit({ ...formData, id: initialData.id });
+                await onSubmit({ ...formData, id: initialData.id }, selectedUsers);
             } else {
-                await onSubmit(formData);
+                await onSubmit(formData, selectedUsers);
             }
+            // Navigate is handled by parent or here? 
+            // Original code: router.push('/projects'); router.refresh();
+            // Let's keep it here if parent doesn't navigate. 
+            // But wait, original code: await onSubmit(...); router.push...
+            // So we should keep that.
             router.push('/projects');
             router.refresh();
         } catch (error) {
             console.error('Error submitting form:', error);
             // Handle error (show toast/alert)
+            alert('Failed to save project. Please check the console for details.');
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleAssignUser = (user: UserSearchResult) => {
+        if (!selectedUsers.some(u => u.id === user.id)) {
+            setSelectedUsers([...selectedUsers, user]);
+        }
+    };
+
+    const handleRemoveUser = (userId: string) => {
+        setSelectedUsers(selectedUsers.filter(u => u.id !== userId));
     };
 
     return (
@@ -93,6 +122,14 @@ export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps)
                         value={formData.sprintDurationDays}
                         onChange={(e) => setFormData({ ...formData, sprintDurationDays: parseInt(e.target.value) || 0 })}
                         className="w-full px-3 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                </div>
+
+                <div className="pt-2 border-t">
+                    <UserAssigner
+                        assignedUsers={selectedUsers}
+                        onAssign={handleAssignUser}
+                        onRemove={handleRemoveUser}
                     />
                 </div>
             </div>
