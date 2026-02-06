@@ -13,7 +13,9 @@ export interface WorkItem {
 export interface ProjectUser {
     id: number;
     userId: string;
-    // Add other properties as needed
+    userName?: string; // For display
+    displayName?: string; // For display
+    email?: string; // For display
 }
 
 export interface Project {
@@ -37,4 +39,11 @@ export interface UpdateProjectDto {
     name: string;
     description: string;
     sprintDurationDays: number;
+}
+
+export interface UserSearchResult {
+    id: string;
+    username: string; // Changed from userName to match backend
+    displayName: string;
+    email: string;
 }

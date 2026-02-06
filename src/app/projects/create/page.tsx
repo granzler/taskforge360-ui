@@ -5,9 +5,15 @@ import { projectService } from '@/services/projectService';
 import { CreateProjectDto } from '@/types';
 
 export default function CreateProjectPage() {
-    const handleCreate = async (data: any) => {
+    const handleCreate = async (data: any, users?: import('@/types').UserSearchResult[]) => {
         // Cast to CreateProjectDto because the form passes a union type but we know handled by service
-        await projectService.create(data as CreateProjectDto);
+        const newProject = await projectService.create(data as CreateProjectDto);
+
+        if (users && users.length > 0 && newProject.id) {
+            await Promise.all(users.map(user =>
+                projectService.assignUser(newProject.id, user.id)
+            ));
+        }
     };
 
     return (

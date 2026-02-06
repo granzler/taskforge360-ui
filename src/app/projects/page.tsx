@@ -10,6 +10,8 @@ export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
 
     useEffect(() => {
         fetchProjects();
@@ -28,6 +30,43 @@ export default function ProjectsPage() {
         }
     };
 
+    const handleDelete = async () => {
+        if (selectedProjects.length === 0) return;
+
+        if (!confirm(`Are you sure you want to delete ${selectedProjects.length} project(s)?`)) return;
+
+        try {
+            await Promise.all(selectedProjects.map(id => projectService.delete(id)));
+            // Refresh list
+            fetchProjects();
+            setSelectedProjects([]);
+        } catch (err) {
+            console.error('Failed to delete projects:', err);
+            alert('Failed to delete some projects. Please try again.');
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedProjects.length === filteredProjects.length) {
+            setSelectedProjects([]);
+        } else {
+            setSelectedProjects(filteredProjects.map(p => p.id));
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        if (selectedProjects.includes(id)) {
+            setSelectedProjects(selectedProjects.filter(pid => pid !== id));
+        } else {
+            setSelectedProjects([...selectedProjects, id]);
+        }
+    };
+
+    const filteredProjects = projects.filter(project =>
+        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
@@ -45,13 +84,24 @@ export default function ProjectsPage() {
                         Manage your teams projects and sprints.
                     </p>
                 </div>
-                <Link
-                    href="/projects/create"
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
-                >
-                    <Plus size={16} />
-                    New Project
-                </Link>
+
+                <div className="flex items-center gap-4">
+                    {selectedProjects.length > 0 && (
+                        <button
+                            onClick={handleDelete}
+                            className="flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors font-medium"
+                        >
+                            Delete ({selectedProjects.length})
+                        </button>
+                    )}
+                    <Link
+                        href="/projects/create"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+                    >
+                        <Plus size={16} />
+                        New Project
+                    </Link>
+                </div>
             </div>
 
             {error && (
@@ -59,6 +109,16 @@ export default function ProjectsPage() {
                     {error}
                 </div>
             )}
+
+            <div className="mb-6">
+                <input
+                    type="text"
+                    placeholder="Search projects..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full max-w-md px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+            </div>
 
             {projects.length === 0 && !error ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
@@ -71,38 +131,67 @@ export default function ProjectsPage() {
                         Create Project
                     </Link>
                 </div>
+            ) : filteredProjects.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed rounded-lg border-muted-foreground/25">
+                    <p className="text-lg font-medium text-muted-foreground">No projects match your search</p>
+                </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {projects.map((project) => (
-                        <div
-                            key={project.id}
-                            className="group bg-card border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow relative"
-                        >
-                            <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
-                                    {project.name}
-                                </h3>
-                                <Link
-                                    href={`/projects/${project.id}/edit`}
-                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
-                                >
-                                    <Edit size={16} />
-                                </Link>
-                            </div>
-
-                            <p className="text-muted-foreground text-sm line-clamp-3 mb-6 min-h-[3rem]">
-                                {project.description || 'No description provided.'}
-                            </p>
-
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium pt-4 border-t">
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar size={14} />
-                                    {project.sprintDurationDays} Days Sprint
-                                </div>
-                                {/* Add stats like active sprints or members here if available */}
-                            </div>
-                        </div>
-                    ))}
+                <div className="border rounded-md overflow-hidden">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-muted text-muted-foreground font-medium">
+                            <tr>
+                                <th className="p-4 w-12">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedProjects.length === filteredProjects.length && filteredProjects.length > 0}
+                                        onChange={toggleSelectAll}
+                                        className="rounded border-gray-300 text-primary focus:ring-primary"
+                                    />
+                                </th>
+                                <th className="p-4">Name</th>
+                                <th className="p-4">Description</th>
+                                <th className="p-4">Sprint Duration</th>
+                                <th className="p-4 w-20">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {filteredProjects.map((project) => (
+                                <tr key={project.id} className="group hover:bg-muted/50 transition-colors">
+                                    <td className="p-4">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedProjects.includes(project.id)}
+                                            onChange={() => toggleSelect(project.id)}
+                                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                    </td>
+                                    <td className="p-4 font-medium">
+                                        <Link href={`/projects/${project.id}`} className="hover:underline text-foreground">
+                                            {project.name}
+                                        </Link>
+                                    </td>
+                                    <td className="p-4 text-muted-foreground max-w-md truncate">
+                                        {project.description || '-'}
+                                    </td>
+                                    <td className="p-4 text-muted-foreground">
+                                        <div className="flex items-center gap-1.5">
+                                            <Calendar size={14} />
+                                            {project.sprintDurationDays} Days
+                                        </div>
+                                    </td>
+                                    <td className="p-4">
+                                        <Link
+                                            href={`/projects/${project.id}`}
+                                            className="p-2 inline-flex text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors"
+                                            title="View Details"
+                                        >
+                                            <Edit size={16} />
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
         </div>
