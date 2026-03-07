@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Project } from '@/types';
+import { Project } from '@/features/projects/types';
 import { projectService } from '@/services/projectService';
 import { Plus, Edit, Loader2, Calendar } from 'lucide-react';
 

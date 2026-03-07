@@ -1,11 +1,11 @@
 'use client';
 
-import ProjectForm from '@/components/ProjectForm';
+import ProjectForm from '@/features/projects/components/ProjectForm';
 import { projectService } from '@/services/projectService';
-import { CreateProjectDto } from '@/types';
+import { CreateProjectDto } from '@/features/projects/types';
 
 export default function CreateProjectPage() {
-    const handleCreate = async (data: any, users?: import('@/types').UserSearchResult[]) => {
+    const handleCreate = async (data: any, users?: import('@/features/projects/types').UserSearchResult[]) => {
         // Cast to CreateProjectDto because the form passes a union type but we know handled by service
         const newProject = await projectService.create(data as CreateProjectDto);
 

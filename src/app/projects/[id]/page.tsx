@@ -2,10 +2,10 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Project, UserSearchResult } from '@/types';
+import { Project, UserSearchResult } from '@/features/projects/types';
 import { projectService } from '@/services/projectService';
 import { ArrowLeft, Calendar, Edit, Loader2, User as UserIcon, Mail, Save, Trash2 } from 'lucide-react';
-import UserAssigner from '@/components/UserAssigner';
+import UserAssigner from '@/features/auth/components/UserAssigner';
 
 interface PageProps {
     params: Promise<{ id: string }>;

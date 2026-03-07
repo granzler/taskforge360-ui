@@ -2,9 +2,9 @@
 
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import ProjectForm from '@/components/ProjectForm';
+import ProjectForm from '@/features/projects/components/ProjectForm';
 import { projectService } from '@/services/projectService';
-import { Project, UpdateProjectDto } from '@/types';
+import { Project, UpdateProjectDto } from '@/features/projects/types';
 import { Loader2 } from 'lucide-react';
 
 interface PageProps {
@@ -39,7 +39,7 @@ export default function EditProjectPage({ params }: PageProps) {
         }
     }, [projectId, router]);
 
-    const handleUpdate = async (data: any, users?: import('@/types').UserSearchResult[]) => {
+    const handleUpdate = async (data: any, users?: import('@/features/projects/types').UserSearchResult[]) => {
         if (!projectId) return;
 
         // 1. Update project details

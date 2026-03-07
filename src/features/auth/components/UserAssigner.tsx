@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserSearchResult } from '@/types';
+import { UserSearchResult } from '@/features/projects/types';
 import { projectService } from '@/services/projectService';
 import { Search, X, UserPlus, User as UserIcon, Loader2 } from 'lucide-react';
 
