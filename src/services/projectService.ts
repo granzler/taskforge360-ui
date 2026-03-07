@@ -1,5 +1,5 @@
 import api from './api';
-import { Project, CreateProjectDto, UpdateProjectDto } from '@/types';
+import { Project, CreateProjectDto, UpdateProjectDto } from '@/features/projects/types';
 
 export const projectService = {
     getAll: async (): Promise<Project[]> => {
@@ -25,9 +25,9 @@ export const projectService = {
         await api.put(`/api/Projects/${id}`, project);
     },
 
-    searchUsers: async (term: string): Promise<import('@/types').UserSearchResult[]> => {
+    searchUsers: async (term: string): Promise<import('@/features/projects/types').UserSearchResult[]> => {
         if (term.length < 3) return [];
-        const response = await api.get<import('@/types').UserSearchResult[]>('/api/Users/search', {
+        const response = await api.get<import('@/features/projects/types').UserSearchResult[]>('/api/Users/search', {
             params: { q: term } // Changed 'search' to 'q' based on Swagger documentation
         });
         return response.data;
@@ -42,8 +42,8 @@ export const projectService = {
         await api.delete(`/api/Projects/${projectId}/users/${userId}`);
     },
 
-    getProjectUsers: async (projectId: number): Promise<import('@/types').UserSearchResult[]> => {
-        const response = await api.get<import('@/types').UserSearchResult[]>(`/api/Projects/${projectId}/users`);
+    getProjectUsers: async (projectId: number): Promise<import('@/features/projects/types').UserSearchResult[]> => {
+        const response = await api.get<import('@/features/projects/types').UserSearchResult[]>(`/api/Projects/${projectId}/users`);
         return response.data;
     },
 

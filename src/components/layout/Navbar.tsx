@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, CheckSquare, Settings } from 'lucide-react';
-import UserInfo from './UserInfo';
+import UserInfo from '@/features/auth/components/UserInfo';
 
 // Map of links to display in the navbar
 const navLinks = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Projects', href: '/projects', icon: CheckSquare }, // Reusing CheckSquare or finding a better one? The user didn't specify an icon, reusing fits or let's use LayoutList if available, but CheckSquare is fine or maybe 'Folder'.
+    { name: 'Projects', href: '/projects', icon: CheckSquare },
     { name: 'Tasks', href: '/tasks', icon: CheckSquare },
-    { name: 'Team', href: '/team', icon: Users },
+    { name: 'Backlog', href: '/backlog', icon: Users }, // Using Users for now or finding a better one? Users was for Team. Let's use Layers if available from Lucide.
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

@@ -1,5 +1,22 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Configuración de Variables de Entorno
+
+Para ejecutar este proyecto, necesitarás configurar las siguientes variables de entorno. Puedes usar el archivo `.env.example` como plantilla:
+
+```bash
+cp .env.example .env
+```
+
+### Variables Requeridas:
+
+- `NEXT_PUBLIC_API_URL`: URL base del API backend (ej: `https://localhost:7157/`).
+- `KEYCLOAK_ID`: ID del cliente para la autenticación con Keycloak.
+- `KEYCLOAK_SECRET`: Secreto del cliente para Keycloak.
+- `KEYCLOAK_ISSUER`: URL del emisor (issuer) de Keycloak.
+- `NEXTAUTH_SECRET`: Una cadena aleatoria usada para cifrar tokens y cookies. Puedes generar una con `openssl rand -base64 32`.
+- `NEXTAUTH_URL`: La URL base de la aplicación (ej: `http://localhost:3000`).
+
 ## Getting Started
 
 First, run the development server:
