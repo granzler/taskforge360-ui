@@ -8,7 +8,6 @@ const api = axios.create({
     },
 });
 
-// Request Interceptor (Adds token)
 api.interceptors.request.use(async (config) => {
     const session = await getSession();
     if (session?.accessToken) {
@@ -17,17 +16,11 @@ api.interceptors.request.use(async (config) => {
     return config;
 });
 
-// Response Interceptor (Handles token expiration)
 api.interceptors.response.use(
-    (response) => {
-        // If the request succeeds, just return it
-        return response;
-    },
+    (response) => response,
     async (error) => {
         if (error.response && error.response.status === 401) {
             console.warn('API returned 401 Unauthorized. Access token may be expired. Signing out...');
-
-            // Only execute signOut on the client side
             if (typeof window !== 'undefined') {
                 await signOut({ callbackUrl: '/login?session_expired=true' });
             }

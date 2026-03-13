@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, CheckSquare, Settings, List } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Settings, List } from 'lucide-react';
 import UserInfo from '@/features/auth/components/UserInfo';
 import ProjectSelector from '@/features/projects/components/ProjectSelector';
 

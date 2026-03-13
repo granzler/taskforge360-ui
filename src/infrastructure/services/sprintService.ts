@@ -1,10 +1,10 @@
-import api from './api';
-import { Sprint, SprintStatus } from '@/features/backlog/types';
+import api from '../api/axios';
+import { Sprint, SprintStatus } from '@/domain/entities/Sprint';
 
 export interface CreateSprintDto {
     name: string;
-    startDate: string;  // ISO string
-    endDate: string;    // ISO string
+    startDate: string;
+    endDate: string;
     projectId: number;
 }
 

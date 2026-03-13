@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, Loader2, AlertCircle } from 'lucide-react';
-import { sprintService, CreateSprintDto } from '@/services/sprintService';
-import { Sprint } from '@/features/backlog/types';
+import { sprintService, CreateSprintDto } from '@/infrastructure/services/sprintService';
+import { Sprint } from '@/domain/entities/Sprint';
 
 interface CreateSprintModalProps {
     projectId: number;

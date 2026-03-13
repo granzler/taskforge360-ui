@@ -1,4 +1,4 @@
-import { Epic, UserStory, SubTask, Sprint } from '@/features/backlog/types';
+import { Epic, UserStory, SubTask } from '@/domain/entities/Project';
 
 export const mockEpics: Epic[] = [
     {

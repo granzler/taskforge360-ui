@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, MoreVertical } from 'lucide-react';
-import { Sprint, UserStory, SubTask, Epic } from '@/features/backlog/types';
+import { UserStory, SubTask, Epic } from '@/domain/entities/Project';
+import { Sprint } from '@/domain/entities/Sprint';
 import UserStoryItem from './UserStoryItem';
 
 interface SprintsTabProps {

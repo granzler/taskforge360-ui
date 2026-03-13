@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import { UserProject } from '@/features/projects/types';
-import { projectService } from '@/services/projectService';
+import { UserProject } from '@/domain/entities/Project';
+import { projectService } from '@/infrastructure/services/projectService';
 
 interface ProjectContextType {
     projects: UserProject[];

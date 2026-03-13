@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Project } from '@/features/projects/types';
-import { projectService } from '@/services/projectService';
-import { Plus, Edit, Loader2, Calendar, Search, FolderOpen, MoreVertical, LayoutGrid, Clock } from 'lucide-react';
+import { Project } from '@/domain/entities/Project';
+import { projectService } from '@/infrastructure/services/projectService';
+import { Plus, Edit, Loader2, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);

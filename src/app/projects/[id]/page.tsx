@@ -2,8 +2,9 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Project, UserSearchResult } from '@/features/projects/types';
-import { projectService } from '@/services/projectService';
+import { Project } from '@/domain/entities/Project';
+import { UserSearchResult } from '@/domain/entities/User';
+import { projectService } from '@/infrastructure/services/projectService';
 import { ArrowLeft, Calendar, Edit, Loader2, Mail, Save, Trash2, FolderOpen, Users, Clock } from 'lucide-react';
 import UserAssigner from '@/features/auth/components/UserAssigner';
 

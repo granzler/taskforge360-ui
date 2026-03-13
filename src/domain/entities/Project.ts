@@ -1,5 +1,47 @@
-export type Priority = 'Low' | 'Medium' | 'High' | 'Critical';
-export type Status = 'To Do' | 'In Progress' | 'Review' | 'Done';
+import { Sprint } from './Sprint';
+import { Priority, Status } from '../types';
+
+export interface ProjectUser {
+    id: number;
+    userId: string;
+    userName?: string;
+    displayName?: string;
+    email?: string;
+}
+
+export interface WorkItem {
+    id: number;
+    title: string;
+}
+
+export interface Project {
+    id: number;
+    name: string;
+    description: string;
+    sprints: Sprint[];
+    workItems: WorkItem[];
+    projectUsers: ProjectUser[];
+    sprintDurationDays: number;
+}
+
+export interface UserProject {
+    id: number;
+    name: string;
+    sprintDurationDays: number;
+}
+
+export interface CreateProjectDto {
+    name: string;
+    description: string;
+    sprintDurationDays: number;
+}
+
+export interface UpdateProjectDto {
+    id: number;
+    name: string;
+    description: string;
+    sprintDurationDays: number;
+}
 
 export interface Epic {
     id: number;
@@ -44,19 +86,4 @@ export interface SubTask {
     updatedAt: string;
     createdBy: string;
     assigneeId?: string;
-}
-
-export interface SprintStatus {
-    id: number;
-    name: string;
-}
-
-export interface Sprint {
-    id: number;
-    name: string;
-    startDate: string;
-    endDate: string;
-    projectId: number;
-    status: SprintStatus;
-    velocity: number;
 }

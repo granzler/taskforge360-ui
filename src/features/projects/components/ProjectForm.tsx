@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CreateProjectDto, Project, UpdateProjectDto, UserSearchResult } from '@/features/projects/types';
-import { Loader2, Save, X, Calendar, Type } from 'lucide-react';
+import { CreateProjectDto, Project, UpdateProjectDto } from '@/domain/entities/Project';
+import { UserSearchResult } from '@/domain/entities/User';
+import { Loader2, Save, X, Calendar } from 'lucide-react';
 import UserAssigner from '@/features/auth/components/UserAssigner';
 
 interface ProjectFormProps {

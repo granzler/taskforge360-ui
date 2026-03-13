@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
 import { ChevronDown, ChevronRight, Target, User, Plus } from 'lucide-react';
-import { Epic, UserStory, SubTask } from '@/features/backlog/types';
-import { getPriorityColor, getStatusIcon } from '../utils/utils';
+import { Epic, UserStory, SubTask } from '@/domain/entities/Project';
+import { getPriorityColor, getStatusIcon } from '@/lib/utils/colors';
 
 interface UserStoryItemProps {
     story: UserStory;

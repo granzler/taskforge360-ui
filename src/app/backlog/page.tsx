@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
     mockEpics,
     mockUserStories,
     mockSubTasks
 } from '@/features/backlog/data/mockBacklogData';
-import { Sprint } from '@/features/backlog/types';
-import { sprintService } from '@/services/sprintService';
+import { Sprint } from '@/domain/entities/Sprint';
+import { sprintService } from '@/infrastructure/services/sprintService';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { Layers, Calendar, Plus, FolderOpen, Loader2, AlertCircle } from 'lucide-react';
 import SprintsTab from '@/features/backlog/components/SprintsTab';

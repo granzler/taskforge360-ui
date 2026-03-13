@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserSearchResult } from '@/features/projects/types';
-import { projectService } from '@/services/projectService';
+import { UserSearchResult } from '@/domain/entities/User';
+import { projectService } from '@/infrastructure/services/projectService';
 import { Search, X, UserPlus, User as UserIcon, Loader2 } from 'lucide-react';
 
 interface UserAssignerProps {

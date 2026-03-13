@@ -3,8 +3,9 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ProjectForm from '@/features/projects/components/ProjectForm';
-import { projectService } from '@/services/projectService';
-import { Project, UpdateProjectDto } from '@/features/projects/types';
+import { projectService } from '@/infrastructure/services/projectService';
+import { Project, CreateProjectDto, UpdateProjectDto } from '@/domain/entities/Project';
+import { UserSearchResult } from '@/domain/entities/User';
 import { Loader2, ArrowLeft, Edit3 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -40,7 +41,7 @@ export default function EditProjectPage({ params }: PageProps) {
         }
     }, [projectId, router]);
 
-    const handleUpdate = async (data: any, users?: import('@/features/projects/types').UserSearchResult[]) => {
+    const handleUpdate = async (data: CreateProjectDto | UpdateProjectDto, users?: UserSearchResult[]) => {
         if (!projectId) return;
 
         // 1. Update project details

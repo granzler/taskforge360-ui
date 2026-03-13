@@ -1,14 +1,15 @@
 'use client';
 
 import ProjectForm from '@/features/projects/components/ProjectForm';
-import { projectService } from '@/services/projectService';
-import { CreateProjectDto } from '@/features/projects/types';
+import { projectService } from '@/infrastructure/services/projectService';
+import { CreateProjectDto } from '@/domain/entities/Project';
+import { UserSearchResult } from '@/domain/entities/User';
 
 import { ArrowLeft, FolderPlus } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CreateProjectPage() {
-    const handleCreate = async (data: any, users?: import('@/features/projects/types').UserSearchResult[]) => {
+    const handleCreate = async (data: CreateProjectDto, users?: UserSearchResult[]) => {
         // Cast to CreateProjectDto because the form passes a union type but we know handled by service
         const newProject = await projectService.create(data as CreateProjectDto);
 
