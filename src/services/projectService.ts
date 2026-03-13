@@ -1,9 +1,14 @@
 import api from './api';
-import { Project, CreateProjectDto, UpdateProjectDto } from '@/features/projects/types';
+import { Project, CreateProjectDto, UpdateProjectDto, UserProject } from '@/features/projects/types';
 
 export const projectService = {
     getAll: async (): Promise<Project[]> => {
         const response = await api.get<Project[]>('/api/Projects');
+        return response.data;
+    },
+
+    getMyProjects: async (): Promise<UserProject[]> => {
+        const response = await api.get<UserProject[]>('/api/Projects/me');
         return response.data;
     },
 

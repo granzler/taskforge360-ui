@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, CheckSquare, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, CheckSquare, Settings, List } from 'lucide-react';
 import UserInfo from '@/features/auth/components/UserInfo';
+import ProjectSelector from '@/features/projects/components/ProjectSelector';
 
 // Map of links to display in the navbar
 const navLinks = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Projects', href: '/projects', icon: CheckSquare },
     { name: 'Tasks', href: '/tasks', icon: CheckSquare },
-    { name: 'Backlog', href: '/backlog', icon: Users }, // Using Users for now or finding a better one? Users was for Team. Let's use Layers if available from Lucide.
+    { name: 'Backlog', href: '/backlog', icon: List },
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
@@ -49,7 +50,8 @@ export default function Navbar() {
                 </nav>
 
                 {/* User Actions */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                    <ProjectSelector />
                     <UserInfo />
                 </div>
             </div>

@@ -46,10 +46,17 @@ export interface SubTask {
     assigneeId?: string;
 }
 
+export interface SprintStatus {
+    id: number;
+    name: string;
+}
+
 export interface Sprint {
     id: number;
     name: string;
     startDate: string;
     endDate: string;
-    status: 'Active' | 'Completed' | 'Planned';
+    projectId: number;
+    status: SprintStatus;
+    velocity: number;
 }

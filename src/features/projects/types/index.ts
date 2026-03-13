@@ -1,3 +1,10 @@
+// Lightweight project type returned by /api/Projects/me
+export interface UserProject {
+    id: number;
+    name: string;
+    sprintDurationDays: number;
+}
+
 export interface Sprint {
     id: number;
     name: string;
