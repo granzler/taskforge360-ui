@@ -1,8 +1,8 @@
-import React from 'react';
-import { Priority, Status } from '@/features/backlog/types';
+import { Priority, Status } from '@/domain/types';
 import { CheckCircle2, CircleDashed, AlertCircle } from 'lucide-react';
+import { ReactNode } from 'react';
 
-export const getPriorityColor = (priority: Priority) => {
+export const getPriorityColor = (priority: Priority): string => {
     switch (priority) {
         case 'Critical': return 'text-red-600 bg-red-100 dark:bg-red-900/30 dark:text-red-400';
         case 'High': return 'text-orange-600 bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400';
@@ -12,7 +12,7 @@ export const getPriorityColor = (priority: Priority) => {
     }
 };
 
-export const getStatusIcon = (status: Status) => {
+export const getStatusIcon = (status: Status): ReactNode => {
     switch (status) {
         case 'Done': return <CheckCircle2 size={16} className="text-green-500" />;
         case 'In Progress': return <CircleDashed size={16} className="text-blue-500 animate-spin-slow" />;

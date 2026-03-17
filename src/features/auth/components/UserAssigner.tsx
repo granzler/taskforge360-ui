@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserSearchResult } from '@/features/projects/types';
-import { projectService } from '@/services/projectService';
+import { UserSearchResult } from '@/domain/entities/User';
+import { projectService } from '@/infrastructure/services/projectService';
 import { Search, X, UserPlus, User as UserIcon, Loader2 } from 'lucide-react';
 
 interface UserAssignerProps {
@@ -28,15 +28,19 @@ export default function UserAssigner({ assignedUsers, onAssign, onRemove, hideAs
             setIsSearching(true);
             try {
                 // Determine if we are searching by term or query - relying on service implementation
-                const users = await projectService.searchUsers(searchTerm);
-                // Filter out already assigned users
-                const availableUsers = users.filter(
-                    u => !assignedUsers.some(assigned => assigned.id === u.id)
-                );
-                setResults(availableUsers);
-                setShowResults(true);
+                const result = await projectService.searchUsers(searchTerm);
+                if (result.success) {
+                    // Filter out already assigned users
+                    const availableUsers = result.data.filter(
+                        u => !assignedUsers.some(assigned => assigned.id === u.id)
+                    );
+                    setResults(availableUsers);
+                    setShowResults(true);
+                } else {
+                    console.error('Error searching users:', result.errors);
+                }
             } catch (error) {
-                console.error('Error searching users:', error);
+                console.error('Error searching users (exception):', error);
             } finally {
                 setIsSearching(false);
             }

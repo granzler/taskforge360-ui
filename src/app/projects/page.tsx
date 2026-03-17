@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Project } from '@/features/projects/types';
-import { projectService } from '@/services/projectService';
-import { Plus, Edit, Loader2, Calendar, Search, FolderOpen, MoreVertical, LayoutGrid, Clock } from 'lucide-react';
+import { Project } from '@/domain/entities/Project';
+import { projectService } from '@/infrastructure/services/projectService';
+import { Plus, Edit, Loader2, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
 
@@ -19,12 +19,16 @@ export default function ProjectsPage() {
 
     const fetchProjects = async () => {
         try {
-            const data = await projectService.getAll();
-            setProjects(data);
-            setError(null);
+            const result = await projectService.getAll();
+            if (result.success) {
+                setProjects(result.data);
+            } else {
+                console.error('Failed to fetch projects:', result.errors);
+                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to load projects.');
+            }
         } catch (err) {
-            console.error('Failed to fetch projects:', err);
-            setError('Failed to load projects. Please try again later.');
+            console.error('Failed to fetch projects (exception):', err);
+            toast.error('Failed to load projects.');
         } finally {
             setIsLoading(false);
         }
@@ -36,13 +40,21 @@ export default function ProjectsPage() {
         if (!confirm(`Are you sure you want to delete ${selectedProjects.length} project(s)?`)) return;
 
         try {
-            await Promise.all(selectedProjects.map(id => projectService.delete(id)));
+            const results = await Promise.all(selectedProjects.map(id => projectService.delete(id)));
+            const hasErrors = results.some(r => !r.success);
+            
+            if (hasErrors) {
+                toast.error('Failed to delete some projects.');
+            } else {
+                toast.success(`Successfully deleted ${selectedProjects.length} project(s).`);
+            }
+            
             // Refresh list
             fetchProjects();
             setSelectedProjects([]);
         } catch (err) {
-            console.error('Failed to delete projects:', err);
-            alert('Failed to delete some projects. Please try again.');
+            console.error('Failed to delete projects (exception):', err);
+            toast.error('Failed to delete projects. Please try again.');
         }
     };
 
@@ -106,13 +118,6 @@ export default function ProjectsPage() {
                 </div>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl mb-6 flex items-center gap-3 dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400">
-                    <Loader2 size={18} />
-                    <span className="font-medium">{error}</span>
-                </div>
-            )}
-
             {/* Toolbar: Search and Select All */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-card border border-border/50 p-2 sm:p-3 rounded-2xl shadow-sm">
                 <div className="relative flex-1 max-w-md">
@@ -140,7 +145,7 @@ export default function ProjectsPage() {
             </div>
 
             {/* Content Area */}
-            {projects.length === 0 && !error ? (
+            {projects.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-2 border-dashed border-border rounded-3xl bg-card/30">
                     <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary">
                         <LayoutGrid size={32} />

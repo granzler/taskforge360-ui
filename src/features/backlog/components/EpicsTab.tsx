@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
 import { Plus, Clock, Layers } from 'lucide-react';
-import { Epic, UserStory } from '@/features/backlog/types';
-import { getPriorityColor, getStatusIcon } from '../utils/utils';
+import { Epic, UserStory } from '@/domain/entities/Project';
+import { getPriorityColor, getStatusIcon } from '@/lib/utils/colors';
 
 interface EpicsTabProps {
     epics: Epic[];

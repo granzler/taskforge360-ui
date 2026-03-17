@@ -1,21 +1,4 @@
-import { Epic, UserStory, SubTask, Sprint } from '@/features/backlog/types';
-
-export const mockSprints: Sprint[] = [
-    {
-        id: 1,
-        name: 'Sprint 1',
-        startDate: '2026-03-01',
-        endDate: '2026-03-14',
-        status: 'Active'
-    },
-    {
-        id: 2,
-        name: 'Sprint 2',
-        startDate: '2026-03-15',
-        endDate: '2026-03-28',
-        status: 'Planned'
-    }
-];
+import { Epic, UserStory, SubTask } from '@/domain/entities/Project';
 
 export const mockEpics: Epic[] = [
     {
@@ -55,7 +38,7 @@ export const mockUserStories: UserStory[] = [
         createdAt: '2026-03-01',
         updatedAt: '2026-03-02',
         createdBy: 'Admin',
-        sprintId: 1,
+        sprintId: 2,
         storyPoints: 5,
         acceptanceCriteria: '1. Valid credentials grant access. 2. Invalid credentials show error.'
     },
@@ -69,7 +52,7 @@ export const mockUserStories: UserStory[] = [
         createdAt: '2026-03-02',
         updatedAt: '2026-03-02',
         createdBy: 'Admin',
-        sprintId: 1,
+        sprintId: 2,
         storyPoints: 3,
         acceptanceCriteria: '1. Save button works. 2. All fields are entryable.'
     },

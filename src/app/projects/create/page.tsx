@@ -1,22 +1,37 @@
 'use client';
 
 import ProjectForm from '@/features/projects/components/ProjectForm';
-import { projectService } from '@/services/projectService';
-import { CreateProjectDto } from '@/features/projects/types';
+import { projectService } from '@/infrastructure/services/projectService';
+import { CreateProjectDto } from '@/domain/entities/Project';
+import { UserSearchResult } from '@/domain/entities/User';
 
 import { ArrowLeft, FolderPlus } from 'lucide-react';
 import Link from 'next/link';
 
-export default function CreateProjectPage() {
-    const handleCreate = async (data: any, users?: import('@/features/projects/types').UserSearchResult[]) => {
-        // Cast to CreateProjectDto because the form passes a union type but we know handled by service
-        const newProject = await projectService.create(data as CreateProjectDto);
+import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
-        if (users && users.length > 0 && newProject.id) {
+export default function CreateProjectPage() {
+    const router = useRouter();
+
+    const handleCreate = async (data: CreateProjectDto, users?: UserSearchResult[]) => {
+        // Cast to CreateProjectDto because the form passes a union type but we know handled by service
+        const newProjectResult = await projectService.create(data as CreateProjectDto);
+
+        if (!newProjectResult.success) {
+            const errorMessage = newProjectResult.errors.map(e => e.message).join(', ');
+            toast.error(errorMessage || 'Failed to create project.');
+            throw new Error(errorMessage);
+        }
+
+        if (users && users.length > 0 && newProjectResult.data.id) {
             await Promise.all(users.map(user =>
-                projectService.assignUser(newProject.id, user.id)
+                projectService.assignUser(newProjectResult.data.id, user.id)
             ));
         }
+
+        toast.success('Project created successfully!');
+        router.push('/projects');
     };
 
     return (

@@ -3,10 +3,12 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import ProjectForm from '@/features/projects/components/ProjectForm';
-import { projectService } from '@/services/projectService';
-import { Project, UpdateProjectDto } from '@/features/projects/types';
+import { projectService } from '@/infrastructure/services/projectService';
+import { Project, CreateProjectDto, UpdateProjectDto } from '@/domain/entities/Project';
+import { UserSearchResult } from '@/domain/entities/User';
 import { Loader2, ArrowLeft, Edit3 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -24,11 +26,17 @@ export default function EditProjectPage({ params }: PageProps) {
     useEffect(() => {
         const fetchProject = async () => {
             try {
-                const data = await projectService.getById(projectId);
-                setProject(data);
+                const result = await projectService.getById(projectId);
+                if (result.success) {
+                    setProject(result.data);
+                } else {
+                    console.error('Failed to fetch project:', result.errors);
+                    toast.error('Failed to load project details.');
+                    router.push('/projects');
+                }
             } catch (error) {
-                console.error('Failed to fetch project:', error);
-                // Redirect or show error
+                console.error('Failed to fetch project (exception):', error);
+                toast.error('Failed to load project details.');
                 router.push('/projects');
             } finally {
                 setIsLoading(false);
@@ -40,11 +48,16 @@ export default function EditProjectPage({ params }: PageProps) {
         }
     }, [projectId, router]);
 
-    const handleUpdate = async (data: any, users?: import('@/features/projects/types').UserSearchResult[]) => {
+    const handleUpdate = async (data: CreateProjectDto | UpdateProjectDto, users?: UserSearchResult[]) => {
         if (!projectId) return;
 
         // 1. Update project details
-        await projectService.update(projectId, data as UpdateProjectDto);
+        const updateResult = await projectService.update(projectId, data as UpdateProjectDto);
+        if (!updateResult.success) {
+             const errorMessage = updateResult.errors.map(e => e.message).join(', ') || 'Failed to update project.';
+             toast.error(errorMessage);
+             throw new Error(errorMessage);
+        }
 
         // 2. Handle user assignments if users are provided
         if (users && project && project.projectUsers) {
@@ -57,11 +70,18 @@ export default function EditProjectPage({ params }: PageProps) {
             // Find users to remove
             const toRemove = project.projectUsers.filter(u => !newIds.includes(u.userId));
 
-            await Promise.all([
+            const assignResults = await Promise.all([
                 ...toAdd.map(u => projectService.assignUser(projectId, u.id)),
                 ...toRemove.map(u => projectService.removeUser(projectId, u.userId))
             ]);
+            
+            if (assignResults.some(r => !r.success)) {
+                toast.error('Project updated, but some user assignments failed.');
+            }
         }
+        
+        toast.success('Project updated successfully.');
+        router.push(`/projects/${projectId}`);
     };
 
     if (isLoading) {

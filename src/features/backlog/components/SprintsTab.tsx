@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, MoreVertical } from 'lucide-react';
-import { Sprint, UserStory, SubTask, Epic } from '@/features/backlog/types';
+import { UserStory, SubTask, Epic } from '@/domain/entities/Project';
+import { Sprint } from '@/domain/entities/Sprint';
 import UserStoryItem from './UserStoryItem';
 
 interface SprintsTabProps {
@@ -35,6 +36,21 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics }: Sp
 
     const unassignedStories = userStories.filter(us => !us.sprintId);
 
+    const getStatusColor = (statusName: string) => {
+        switch (statusName.toLowerCase()) {
+            case 'planned':
+                return 'bg-blue-500';
+            case 'active':
+                return 'bg-green-500';
+            case 'completed':
+                return 'bg-purple-500';
+            case 'closed':
+                return 'bg-slate-500';
+            default:
+                return 'bg-slate-500';
+        }
+    };
+
     return (
         <div className="space-y-6">
             {storiesBySprint.map(sprint => (
@@ -48,18 +64,18 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics }: Sp
                                 {expandedSprints.includes(sprint.id) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                             </div>
                             <div>
-                                <h3 className="font-bold text-base flex items-center gap-2">
+                                <h3 className="font-bold text-base flex items-center gap-3">
                                     {sprint.name}
-                                    {sprint.status === 'Active' && (
-                                        <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">Active</span>
-                                    )}
+                                    <span className={`text-[10px] ${getStatusColor(sprint.status.name)} text-white px-2 py-0.5 rounded-full uppercase tracking-widest`}>
+                                        {sprint.status.name}
+                                    </span>
                                 </h3>
                                 <p className="text-xs text-slate-500">{sprint.startDate} — {sprint.endDate}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-6">
                             <div className="text-right">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Progress</p>
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">{sprint.status.name}</p>
                                 <div className="w-32 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1 overflow-hidden">
                                     <div className="h-full bg-primary w-[45%]" />
                                 </div>
