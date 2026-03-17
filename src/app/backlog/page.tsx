@@ -9,10 +9,11 @@ import {
 import { Sprint } from '@/domain/entities/Sprint';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { useProject } from '@/features/projects/context/ProjectContext';
-import { Layers, Calendar, Plus, FolderOpen, Loader2, AlertCircle } from 'lucide-react';
+import { Layers, Calendar, Plus, FolderOpen, Loader2 } from 'lucide-react';
 import SprintsTab from '@/features/backlog/components/SprintsTab';
 import EpicsTab from '@/features/backlog/components/EpicsTab';
 import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
+import { toast } from 'react-hot-toast';
 
 export default function BacklogPage() {
     const [activeTab, setActiveTab] = useState<'sprints' | 'epics'>('sprints');
@@ -21,7 +22,6 @@ export default function BacklogPage() {
 
     const [sprints, setSprints] = useState<Sprint[]>([]);
     const [isLoadingSprints, setIsLoadingSprints] = useState(false);
-    const [sprintsError, setSprintsError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!selectedProject) {
@@ -31,13 +31,18 @@ export default function BacklogPage() {
 
         const fetchSprints = async () => {
             setIsLoadingSprints(true);
-            setSprintsError(null);
             try {
-                const data = await sprintService.getByProject(selectedProject.id);
-                setSprints(data);
+                const result = await sprintService.getByProject(selectedProject.id);
+                if (result.success) {
+                    setSprints(result.data);
+                } else {
+                    console.error('Failed to fetch sprints:', result.errors);
+                    toast.error(result.errors.map(e => e.message).join(', ') || 'Could not load sprints.');
+                    setSprints([]);
+                }
             } catch (err) {
-                console.error('Failed to fetch sprints:', err);
-                setSprintsError('Could not load sprints. Please try again.');
+                console.error('Failed to fetch sprints (exception):', err);
+                toast.error('Could not load sprints. Please try again.');
                 setSprints([]);
             } finally {
                 setIsLoadingSprints(false);
@@ -50,6 +55,7 @@ export default function BacklogPage() {
     const handleSprintCreated = (sprint: Sprint) => {
         setSprints(prev => [...prev, sprint]);
         setShowCreateModal(false);
+        toast.success(`Sprint "${sprint.name}" created!`);
     };
 
     const renderSprintsContent = () => {
@@ -72,15 +78,6 @@ export default function BacklogPage() {
                 <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
                     <Loader2 size={20} className="animate-spin" />
                     <span className="text-sm">Loading sprints for <strong>{selectedProject.name}</strong>…</span>
-                </div>
-            );
-        }
-
-        if (sprintsError) {
-            return (
-                <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-                    <AlertCircle size={28} className="text-destructive" />
-                    <p className="text-sm text-destructive">{sprintsError}</p>
                 </div>
             );
         }

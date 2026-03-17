@@ -1,5 +1,7 @@
 import api from '../api/axios';
 import { Sprint, SprintStatus } from '@/domain/entities/Sprint';
+import { Result } from '@/domain/types';
+import { handleApiCall } from '../api/apiHelper';
 
 export interface CreateSprintDto {
     name: string;
@@ -9,18 +11,24 @@ export interface CreateSprintDto {
 }
 
 export const sprintService = {
-    getByProject: async (projectId: number): Promise<Sprint[]> => {
-        const response = await api.get<Sprint[]>(`/api/Sprints/project/${projectId}`);
-        return response.data;
+    getByProject: (projectId: number): Promise<Result<Sprint[]>> => {
+        return handleApiCall(async () => {
+            const response = await api.get<Sprint[]>(`/api/Sprints/project/${projectId}`);
+            return response.data;
+        });
     },
 
-    create: async (dto: CreateSprintDto): Promise<Sprint> => {
-        const response = await api.post<Sprint>('/api/Sprints', dto);
-        return response.data;
+    create: (dto: CreateSprintDto): Promise<Result<Sprint>> => {
+        return handleApiCall(async () => {
+            const response = await api.post<Sprint>('/api/Sprints', dto);
+            return response.data;
+        });
     },
 
-    getStatuses: async (): Promise<SprintStatus[]> => {
-        const response = await api.get<SprintStatus[]>('/api/Sprints/statuses');
-        return response.data;
+    getStatuses: (): Promise<Result<SprintStatus[]>> => {
+        return handleApiCall(async () => {
+            const response = await api.get<SprintStatus[]>('/api/Sprints/statuses');
+            return response.data;
+        });
     },
 };

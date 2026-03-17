@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, Loader2, AlertCircle } from 'lucide-react';
+import { X, Calendar, Loader2 } from 'lucide-react';
 import { sprintService, CreateSprintDto } from '@/infrastructure/services/sprintService';
 import { Sprint } from '@/domain/entities/Sprint';
+import { toast } from 'react-hot-toast';
 
 interface CreateSprintModalProps {
     projectId: number;
@@ -26,7 +27,6 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
     const [startDate, setStartDate] = useState(today);
     const [endDate, setEndDate] = useState(() => computeEndDate(today));
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const handleStartDateChange = (value: string) => {
         setStartDate(value);
@@ -47,7 +47,6 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
         if (!isValid) return;
 
         setIsSubmitting(true);
-        setError(null);
 
         const dto: CreateSprintDto = {
             name: name.trim(),
@@ -57,11 +56,16 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
         };
 
         try {
-            const created = await sprintService.create(dto);
-            onCreated(created);
+            const result = await sprintService.create(dto);
+            if (result.success) {
+                onCreated(result.data);
+            } else {
+                console.error('Failed to create sprint:', result.errors);
+                toast.error(result.errors.map(e => e.message).join(', ') || 'Could not create the sprint.');
+            }
         } catch (err) {
-            console.error('Failed to create sprint:', err);
-            setError('Could not create the sprint. Please try again.');
+            console.error('Failed to create sprint (exception):', err);
+            toast.error('Could not create the sprint. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -145,14 +149,6 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
                         <p className="text-xs text-muted-foreground">
                             Duration: <strong>{sprintDurationDays} days</strong> · configured in project settings · Status will be set to <strong>Planned</strong>
                         </p>
-
-                        {/* API Error */}
-                        {error && (
-                            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-400">
-                                <AlertCircle size={14} className="shrink-0" />
-                                {error}
-                            </div>
-                        )}
 
                         {/* Actions */}
                         <div className="flex items-center justify-end gap-3 pt-1">

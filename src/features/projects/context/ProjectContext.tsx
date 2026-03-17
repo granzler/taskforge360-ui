@@ -26,10 +26,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const loadProjects = async () => {
             setIsLoading(true);
             try {
-                const data = await projectService.getMyProjects();
-                setProjects(data);
+                const result = await projectService.getMyProjects();
+                if (result.success) {
+                    setProjects(result.data);
+                } else {
+                     console.error('Failed to load user projects:', result.errors);
+                     setProjects([]);
+                }
             } catch (err) {
-                console.error('Failed to load user projects:', err);
+                console.error('Failed to load user projects (exception):', err);
                 setProjects([]);
             } finally {
                 setIsLoading(false);

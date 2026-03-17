@@ -7,6 +7,7 @@ import { UserSearchResult } from '@/domain/entities/User';
 import { projectService } from '@/infrastructure/services/projectService';
 import { ArrowLeft, Calendar, Edit, Loader2, Mail, Save, Trash2, FolderOpen, Users, Clock } from 'lucide-react';
 import UserAssigner from '@/features/auth/components/UserAssigner';
+import { toast } from 'react-hot-toast';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -35,18 +36,25 @@ export default function ProjectDetailsPage({ params }: PageProps) {
 
         const fetchData = async () => {
             try {
-                const [projectData, usersData] = await Promise.all([
+                const [projectResult, usersResult] = await Promise.all([
                     projectService.getById(projectId),
                     projectService.getProjectUsers(projectId)
                 ]);
-                setProject(projectData);
-                setUsers(usersData);
 
-                setEditForm({
-                    name: projectData.name,
-                    description: projectData.description || '',
-                    sprintDurationDays: projectData.sprintDurationDays
-                });
+                if (projectResult.success) {
+                    setProject(projectResult.data);
+                    setEditForm({
+                        name: projectResult.data.name,
+                        description: projectResult.data.description || '',
+                        sprintDurationDays: projectResult.data.sprintDurationDays
+                    });
+                } else {
+                    setError('Project not found or no longer exists.');
+                }
+
+                if (usersResult.success) {
+                    setUsers(usersResult.data);
+                }
             } catch (err) {
                 console.error('Failed to fetch project details:', err);
                 setError('Failed to load project details.');
@@ -62,20 +70,25 @@ export default function ProjectDetailsPage({ params }: PageProps) {
         if (!project) return;
         setIsSaving(true);
         try {
-            await projectService.update(project.id, {
+            const updateResult = await projectService.update(project.id, {
                 id: project.id,
                 ...editForm
             });
 
-            // Update local state
-            setProject({
-                ...project,
-                ...editForm
-            });
-            setIsEditing(false);
+            if (updateResult.success) {
+                // Update local state
+                setProject({
+                    ...project,
+                    ...editForm
+                });
+                setIsEditing(false);
+                toast.success('Project updated successfully.');
+            } else {
+                toast.error(updateResult.errors.map(e => e.message).join(', ') || 'Failed to update project.');
+            }
         } catch (err) {
             console.error('Failed to update project:', err);
-            alert('Failed to update project. Please try again.');
+            toast.error('Failed to update project. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -85,25 +98,35 @@ export default function ProjectDetailsPage({ params }: PageProps) {
         if (!confirm('Are you sure you want to remove this user from the project?')) return;
 
         try {
-            await projectService.removeUser(projectId, userId);
-            // Optimistic update
-            setUsers(users.filter(u => u.id !== userId));
+            const result = await projectService.removeUser(projectId, userId);
+            if (result.success) {
+                // Optimistic update
+                setUsers(users.filter(u => u.id !== userId));
+                toast.success('User removed from project.');
+            } else {
+                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to remove user.');
+            }
         } catch (err) {
             console.error('Failed to remove user:', err);
-            alert('Failed to remove user.');
+            toast.error('Failed to remove user.');
         }
     };
 
     const handleAssignUser = async (user: UserSearchResult) => {
         try {
-            await projectService.assignUser(projectId, user.id);
-            // Verify if already in list to avoid duplicates in UI
-            if (!users.some(u => u.id === user.id)) {
-                setUsers([...users, user]);
+            const result = await projectService.assignUser(projectId, user.id);
+            if (result.success) {
+                // Verify if already in list to avoid duplicates in UI
+                if (!users.some(u => u.id === user.id)) {
+                    setUsers([...users, user]);
+                    toast.success('User added to project.');
+                }
+            } else {
+                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to assign user.');
             }
         } catch (err) {
             console.error('Failed to assign user:', err);
-            alert('Failed to assign user.');
+            toast.error('Failed to assign user.');
         }
     };
 

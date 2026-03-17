@@ -6,54 +6,76 @@ import {
     UpdateProjectDto
 } from '@/domain/entities/Project';
 import { UserSearchResult } from '@/domain/entities/User';
+import { Result } from '@/domain/types';
+import { handleApiCall } from '../api/apiHelper';
 
 export const projectService = {
-    getAll: async (): Promise<Project[]> => {
-        const response = await api.get<Project[]>('/api/Projects');
-        return response.data;
-    },
-
-    getMyProjects: async (): Promise<UserProject[]> => {
-        const response = await api.get<UserProject[]>('/api/Projects/me');
-        return response.data;
-    },
-
-    getById: async (id: number): Promise<Project> => {
-        const response = await api.get<Project>(`/api/Projects/${id}`);
-        return response.data;
-    },
-
-    create: async (project: CreateProjectDto): Promise<Project> => {
-        const response = await api.post<Project>('/api/Projects', project);
-        return response.data;
-    },
-
-    update: async (id: number, project: UpdateProjectDto): Promise<void> => {
-        await api.put(`/api/Projects/${id}`, project);
-    },
-
-    searchUsers: async (term: string): Promise<UserSearchResult[]> => {
-        if (term.length < 3) return [];
-        const response = await api.get<UserSearchResult[]>('/api/Users/search', {
-            params: { q: term }
+    getAll: (): Promise<Result<Project[]>> => {
+        return handleApiCall(async () => {
+            const response = await api.get<Project[]>('/api/Projects');
+            return response.data;
         });
-        return response.data;
     },
 
-    assignUser: async (projectId: number, userId: string): Promise<void> => {
-        await api.post(`/api/Projects/${projectId}/users`, { userIds: [userId] });
+    getMyProjects: (): Promise<Result<UserProject[]>> => {
+        return handleApiCall(async () => {
+            const response = await api.get<UserProject[]>('/api/Projects/me');
+            return response.data;
+        });
     },
 
-    removeUser: async (projectId: number, userId: string): Promise<void> => {
-        await api.delete(`/api/Projects/${projectId}/users/${userId}`);
+    getById: (id: number): Promise<Result<Project>> => {
+        return handleApiCall(async () => {
+            const response = await api.get<Project>(`/api/Projects/${id}`);
+            return response.data;
+        });
     },
 
-    getProjectUsers: async (projectId: number): Promise<UserSearchResult[]> => {
-        const response = await api.get<UserSearchResult[]>(`/api/Projects/${projectId}/users`);
-        return response.data;
+    create: (project: CreateProjectDto): Promise<Result<Project>> => {
+        return handleApiCall(async () => {
+            const response = await api.post<Project>('/api/Projects', project);
+            return response.data;
+        });
     },
 
-    delete: async (id: number): Promise<void> => {
-        await api.delete(`/api/Projects/${id}`);
+    update: (id: number, project: UpdateProjectDto): Promise<Result<void>> => {
+        return handleApiCall(async () => {
+            await api.put(`/api/Projects/${id}`, project);
+        });
+    },
+
+    searchUsers: (term: string): Promise<Result<UserSearchResult[]>> => {
+        return handleApiCall(async () => {
+            if (term.length < 3) return [];
+            const response = await api.get<UserSearchResult[]>('/api/Users/search', {
+                params: { q: term }
+            });
+            return response.data;
+        });
+    },
+
+    assignUser: (projectId: number, userId: string): Promise<Result<void>> => {
+        return handleApiCall(async () => {
+            await api.post(`/api/Projects/${projectId}/users`, { userIds: [userId] });
+        });
+    },
+
+    removeUser: (projectId: number, userId: string): Promise<Result<void>> => {
+        return handleApiCall(async () => {
+            await api.delete(`/api/Projects/${projectId}/users/${userId}`);
+        });
+    },
+
+    getProjectUsers: (projectId: number): Promise<Result<UserSearchResult[]>> => {
+        return handleApiCall(async () => {
+            const response = await api.get<UserSearchResult[]>(`/api/Projects/${projectId}/users`);
+            return response.data;
+        });
+    },
+
+    delete: (id: number): Promise<Result<void>> => {
+        return handleApiCall(async () => {
+            await api.delete(`/api/Projects/${id}`);
+        });
     },
 };
