@@ -31,34 +31,32 @@ export default function ProjectDetailsPage({ params }: PageProps) {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        if (projectId) {
-            fetchData();
-        }
+        if (!projectId) return;
+
+        const fetchData = async () => {
+            try {
+                const [projectData, usersData] = await Promise.all([
+                    projectService.getById(projectId),
+                    projectService.getProjectUsers(projectId)
+                ]);
+                setProject(projectData);
+                setUsers(usersData);
+
+                setEditForm({
+                    name: projectData.name,
+                    description: projectData.description || '',
+                    sprintDurationDays: projectData.sprintDurationDays
+                });
+            } catch (err) {
+                console.error('Failed to fetch project details:', err);
+                setError('Failed to load project details.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
     }, [projectId]);
-
-    const fetchData = async () => {
-        try {
-            // Fetch project and users in parallel
-            const [projectData, usersData] = await Promise.all([
-                projectService.getById(projectId),
-                projectService.getProjectUsers(projectId)
-            ]);
-            setProject(projectData);
-            setUsers(usersData);
-
-            // Initialize edit form
-            setEditForm({
-                name: projectData.name,
-                description: projectData.description || '',
-                sprintDurationDays: projectData.sprintDurationDays
-            });
-        } catch (err) {
-            console.error('Failed to fetch project details:', err);
-            setError('Failed to load project details.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleSave = async () => {
         if (!project) return;
