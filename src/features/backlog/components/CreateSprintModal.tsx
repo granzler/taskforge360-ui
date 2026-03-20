@@ -136,18 +136,19 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
                                     <span className="flex items-center gap-1.5"><Calendar size={13} /> End Date</span>
                                 </label>
                                 <input
+                                    id="sprint-end"
                                     type="date"
                                     value={endDate}
-                                    readOnly
-                                    className="w-full px-3 py-2 text-sm rounded-md border border-border bg-accent/30 text-muted-foreground cursor-default"
-                                    title={`Calculated from start date + ${sprintDurationDays} days (project setting)`}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                                    title={`Suggested based on start date + ${sprintDurationDays} days (project setting)`}
                                 />
                             </div>
                         </div>
 
                         {/* Duration info */}
                         <p className="text-xs text-muted-foreground">
-                            Duration: <strong>{sprintDurationDays} days</strong> · configured in project settings · Status will be set to <strong>Planned</strong>
+                            Default duration: <strong>{sprintDurationDays} days</strong> (project setting). You can manually adjust the end date. Status will be <strong>Planned</strong>.
                         </p>
 
                         {/* Actions */}

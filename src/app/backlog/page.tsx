@@ -58,6 +58,10 @@ export default function BacklogPage() {
         toast.success(`Sprint "${sprint.name}" created!`);
     };
 
+    const handleSprintDeleted = (sprintId: number) => {
+        setSprints(prev => prev.filter(s => s.id !== sprintId));
+    };
+
     const renderSprintsContent = () => {
         if (!selectedProject) {
             return (
@@ -88,6 +92,7 @@ export default function BacklogPage() {
                 userStories={mockUserStories}
                 subtasks={mockSubTasks}
                 epics={mockEpics}
+                onSprintDeleted={handleSprintDeleted}
             />
         );
     };

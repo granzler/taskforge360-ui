@@ -31,4 +31,11 @@ export const sprintService = {
             return response.data;
         });
     },
+
+    delete: (sprintId: number): Promise<Result<void>> => {
+        return handleApiCall(async () => {
+            const response = await api.delete<void>(`/api/Sprints/${sprintId}`);
+            return response.data;
+        });
+    },
 };

@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, MoreVertical } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2 } from 'lucide-react';
 import { UserStory, SubTask, Epic } from '@/domain/entities/Project';
 import { Sprint } from '@/domain/entities/Sprint';
+import { sprintService } from '@/infrastructure/services/sprintService';
+import { toast } from 'react-hot-toast';
 import UserStoryItem from './UserStoryItem';
 
 interface SprintsTabProps {
@@ -11,11 +13,17 @@ interface SprintsTabProps {
     userStories: UserStory[];
     subtasks: SubTask[];
     epics: Epic[];
+    onSprintDeleted: (sprintId: number) => void;
 }
 
-export default function SprintsTab({ sprints, userStories, subtasks, epics }: SprintsTabProps) {
+export default function SprintsTab({ sprints, userStories, subtasks, epics, onSprintDeleted }: SprintsTabProps) {
     const [expandedSprints, setExpandedSprints] = useState<number[]>([1, 2]);
     const [expandedStories, setExpandedStories] = useState<number[]>([]);
+    
+    // Deletion states
+    const [menuOpenSprintId, setMenuOpenSprintId] = useState<number | null>(null);
+    const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const toggleSprint = (id: number) => {
         setExpandedSprints(prev =>
@@ -51,12 +59,33 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics }: Sp
         }
     };
 
+    const handleDeleteSprint = async () => {
+        if (!sprintToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            const result = await sprintService.delete(sprintToDelete.id);
+            if (result.success) {
+                toast.success(`Sprint "${sprintToDelete.name}" deleted successfully.`);
+                onSprintDeleted(sprintToDelete.id);
+                setSprintToDelete(null);
+            } else {
+                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to delete sprint.');
+            }
+        } catch (err) {
+            console.error('Failed to delete sprint:', err);
+            toast.error('An unexpected error occurred while deleting the sprint.');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             {storiesBySprint.map(sprint => (
-                <div key={sprint.id} className="rounded-xl border border-border bg-card/50 shadow-sm overflow-hidden">
+                <div key={sprint.id} className="rounded-xl border border-border bg-card/50 shadow-sm relative transition-all">
                     <div
-                        className="bg-accent/30 p-4 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
+                        className={`bg-accent/30 p-4 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors ${expandedSprints.includes(sprint.id) ? 'rounded-t-xl' : 'rounded-xl'}`}
                         onClick={() => toggleSprint(sprint.id)}
                     >
                         <div className="flex items-center gap-3">
@@ -80,14 +109,46 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics }: Sp
                                     <div className="h-full bg-primary w-[45%]" />
                                 </div>
                             </div>
-                            <button className="p-2 hover:bg-background/80 rounded-full text-slate-400 transition-colors" onClick={(e) => e.stopPropagation()}>
-                                <MoreVertical size={16} />
-                            </button>
+                            <div className="relative">
+                                <button 
+                                    className="p-2 hover:bg-background/80 rounded-full text-slate-400 transition-colors" 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setMenuOpenSprintId(menuOpenSprintId === sprint.id ? null : sprint.id);
+                                    }}
+                                >
+                                    <MoreVertical size={16} />
+                                </button>
+                                
+                                {menuOpenSprintId === sprint.id && (
+                                    <>
+                                        <div 
+                                            className="fixed inset-0 z-10" 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setMenuOpenSprintId(null);
+                                            }} 
+                                        />
+                                        <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-xl shadow-lg z-20 overflow-hidden text-sm py-1 animate-in fade-in zoom-in-95 duration-100">
+                                            <button
+                                                className="w-full text-left px-4 py-2 hover:bg-accent hover:text-red-500 transition-colors flex items-center gap-2 text-red-600 dark:text-red-400"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setMenuOpenSprintId(null);
+                                                    setSprintToDelete(sprint);
+                                                }}
+                                            >
+                                                <Trash2 size={14} /> Delete Sprint
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     {expandedSprints.includes(sprint.id) && (
-                        <div className="p-4 border-t border-border bg-background/20">
+                        <div className="p-4 border-t border-border bg-background/20 rounded-b-xl">
                             {sprint.stories.length > 0 ? (
                                 sprint.stories.map(story => (
                                     <UserStoryItem
@@ -140,6 +201,43 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics }: Sp
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {sprintToDelete && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
+                    <div className="w-full max-w-sm bg-background border border-border rounded-xl shadow-2xl p-6  animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3 text-red-500 mb-4">
+                            <div className="p-2 rounded-full bg-red-100 dark:bg-red-500/20">
+                                <Trash2 size={24} />
+                            </div>
+                            <h2 className="text-lg font-bold text-foreground">Delete Sprint?</h2>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                            Are you sure you want to delete the sprint <strong>&quot;{sprintToDelete.name}&quot;</strong>? This action cannot be undone. Associated user stories will be moved to the backlog.
+                        </p>
+                        <div className="flex justify-end gap-3 w-full">
+                            <button
+                                onClick={() => setSprintToDelete(null)}
+                                disabled={isDeleting}
+                                className="px-4 py-2 text-sm font-medium rounded-md border border-border hover:bg-accent transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteSprint}
+                                disabled={isDeleting}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                                {isDeleting ? (
+                                    <><Loader2 size={14} className="animate-spin" /> Deleting...</>
+                                ) : (
+                                    'Delete'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
