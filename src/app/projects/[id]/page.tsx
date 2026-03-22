@@ -8,6 +8,7 @@ import { projectService } from '@/infrastructure/services/projectService';
 import { ArrowLeft, Calendar, Edit, Loader2, Mail, Save, Trash2, FolderOpen, Users, Clock } from 'lucide-react';
 import UserAssigner from '@/features/auth/components/UserAssigner';
 import { toast } from 'react-hot-toast';
+import { useProject } from '@/features/projects/context/ProjectContext';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -17,6 +18,7 @@ export default function ProjectDetailsPage({ params }: PageProps) {
     const { id } = use(params);
     const projectId = parseInt(id);
 
+    const { refreshProjects } = useProject();
     const [project, setProject] = useState<Project | null>(null);
     const [users, setUsers] = useState<UserSearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -100,9 +102,9 @@ export default function ProjectDetailsPage({ params }: PageProps) {
         try {
             const result = await projectService.removeUser(projectId, userId);
             if (result.success) {
-                // Optimistic update
                 setUsers(users.filter(u => u.id !== userId));
                 toast.success('User removed from project.');
+                await refreshProjects();
             } else {
                 toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to remove user.');
             }
@@ -116,11 +118,11 @@ export default function ProjectDetailsPage({ params }: PageProps) {
         try {
             const result = await projectService.assignUser(projectId, user.id);
             if (result.success) {
-                // Verify if already in list to avoid duplicates in UI
                 if (!users.some(u => u.id === user.id)) {
                     setUsers([...users, user]);
                     toast.success('User added to project.');
                 }
+                await refreshProjects();
             } else {
                 toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to assign user.');
             }

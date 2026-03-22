@@ -1,4 +1,4 @@
-import { Priority, Status } from '@/domain/types';
+import { Priority, Status, getWorkItemPriorityLabel } from '@/domain/types';
 import { CheckCircle2, CircleDashed, AlertCircle } from 'lucide-react';
 import { ReactNode } from 'react';
 
@@ -19,4 +19,9 @@ export const getStatusIcon = (status: Status): ReactNode => {
         case 'Review': return <AlertCircle size={16} className="text-orange-500" />;
         default: return <CircleDashed size={16} className="text-slate-400" />;
     }
+};
+
+export const getEpicPriorityColor = (priority: number | string | undefined): string => {
+    const label = getWorkItemPriorityLabel(priority);
+    return getPriorityColor(label as Priority);
 };

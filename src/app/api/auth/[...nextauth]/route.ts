@@ -11,10 +11,8 @@ export const authOptions: AuthOptions = {
       authorization: {
         params: {
           scope: "openid profile email",
-          // Forzar pantalla de login siempre
-          prompt: "login",
-          // Asegurar que el usuario esté autenticado
-          max_age: 0,
+          prompt: "consent",
+          max_age: 28800,
         }
       },
     })

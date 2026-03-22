@@ -9,6 +9,7 @@ import { UserSearchResult } from '@/domain/entities/User';
 import { Loader2, ArrowLeft, Edit3 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useProject } from '@/features/projects/context/ProjectContext';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -20,6 +21,7 @@ export default function EditProjectPage({ params }: PageProps) {
     const projectId = parseInt(id);
 
     const router = useRouter();
+    const { refreshProjects } = useProject();
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -64,19 +66,21 @@ export default function EditProjectPage({ params }: PageProps) {
             const currentIds = project.projectUsers.map(u => u.userId);
             const newIds = users.map(u => u.id);
 
-            // Find users to add
             const toAdd = users.filter(u => !currentIds.includes(u.id));
-
-            // Find users to remove
             const toRemove = project.projectUsers.filter(u => !newIds.includes(u.userId));
 
-            const assignResults = await Promise.all([
-                ...toAdd.map(u => projectService.assignUser(projectId, u.id)),
-                ...toRemove.map(u => projectService.removeUser(projectId, u.userId))
-            ]);
-            
-            if (assignResults.some(r => !r.success)) {
-                toast.error('Project updated, but some user assignments failed.');
+            const hasChanges = toAdd.length > 0 || toRemove.length > 0;
+
+            if (hasChanges) {
+                const assignResults = await Promise.all([
+                    ...toAdd.map(u => projectService.assignUser(projectId, u.id)),
+                    ...toRemove.map(u => projectService.removeUser(projectId, u.userId))
+                ]);
+                
+                if (assignResults.some(r => !r.success)) {
+                    toast.error('Project updated, but some user assignments failed.');
+                }
+                await refreshProjects();
             }
         }
         
