@@ -1,18 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2 } from 'lucide-react';
 import { UserStory, SubTask, Epic } from '@/domain/entities/Project';
+import { EpicResponseDto } from '@/domain/entities/Epic';
 import { Sprint } from '@/domain/entities/Sprint';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { toast } from 'react-hot-toast';
 import UserStoryItem from './UserStoryItem';
 
+type EpicItem = Epic | EpicResponseDto;
+
+interface SprintWithStories extends Sprint {
+    stories: UserStory[];
+    totalStoryPoints: number;
+}
+
 interface SprintsTabProps {
     sprints: Sprint[];
     userStories: UserStory[];
     subtasks: SubTask[];
-    epics: Epic[];
+    epics: EpicItem[];
     onSprintDeleted: (sprintId: number) => void;
 }
 
@@ -37,12 +45,18 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
         );
     };
 
-    const storiesBySprint = sprints.map(sprint => ({
-        ...sprint,
-        stories: userStories.filter(us => us.sprintId === sprint.id)
-    }));
+    const storiesBySprint: SprintWithStories[] = sprints.map(sprint => {
+        const sprintStories = userStories.filter(us => us.sprintId === sprint.id);
+        const totalStoryPoints = sprintStories.reduce((sum, us) => sum + (us.storyPoints || 0), 0);
+        return {
+            ...sprint,
+            stories: sprintStories,
+            totalStoryPoints
+        };
+    });
 
     const unassignedStories = userStories.filter(us => !us.sprintId);
+    const unassignedStoryPoints = unassignedStories.reduce((sum, us) => sum + (us.storyPoints || 0), 0);
 
     const getStatusColor = (statusName: string) => {
         switch (statusName.toLowerCase()) {
@@ -104,10 +118,8 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
                         </div>
                         <div className="flex items-center gap-6">
                             <div className="text-right">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">{sprint.status.name}</p>
-                                <div className="w-32 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-1 overflow-hidden">
-                                    <div className="h-full bg-primary w-[45%]" />
-                                </div>
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">{sprint.totalStoryPoints} pts</p>
+                                <p className="text-[10px] text-muted-foreground">{sprint.stories.length} stories</p>
                             </div>
                             <div className="relative">
                                 <button 
@@ -179,7 +191,14 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
                     <div className="w-full border-t border-border"></div>
                 </div>
                 <div className="relative flex justify-center">
-                    <span className="bg-background px-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Backlog / Unassigned</span>
+                    <span className="bg-background px-3 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                        Backlog / Unassigned
+                        {unassignedStories.length > 0 && (
+                            <span className="ml-2 text-muted-foreground font-normal">
+                                ({unassignedStoryPoints} pts)
+                            </span>
+                        )}
+                    </span>
                 </div>
             </div>
 

@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronRight, Target, User, Plus } from 'lucide-react';
 import { Epic, UserStory, SubTask } from '@/domain/entities/Project';
+import { EpicResponseDto } from '@/domain/entities/Epic';
 import { getPriorityColor, getStatusIcon } from '@/lib/utils/colors';
 
 interface UserStoryItemProps {
@@ -9,7 +10,7 @@ interface UserStoryItemProps {
     isExpanded: boolean;
     onToggle: (id: number) => void;
     subtasks: SubTask[];
-    epic?: Epic;
+    epic?: Epic | EpicResponseDto;
 }
 
 export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, epic }: UserStoryItemProps) {

@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import ProjectForm from '@/features/projects/components/ProjectForm';
 import { projectService } from '@/infrastructure/services/projectService';
 import { CreateProjectDto } from '@/domain/entities/Project';
@@ -9,7 +10,6 @@ import { ArrowLeft, FolderPlus } from 'lucide-react';
 import Link from 'next/link';
 
 import { toast } from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
 
 export default function CreateProjectPage() {
     const router = useRouter();

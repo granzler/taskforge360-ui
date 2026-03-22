@@ -2,54 +2,98 @@
 
 import { useState, useEffect } from 'react';
 import {
-    mockEpics,
     mockUserStories,
     mockSubTasks
 } from '@/features/backlog/data/mockBacklogData';
 import { Sprint } from '@/domain/entities/Sprint';
 import { sprintService } from '@/infrastructure/services/sprintService';
+import { epicService } from '@/infrastructure/services/epicService';
+import { EpicResponseDto } from '@/domain/entities/Epic';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { Layers, Calendar, Plus, FolderOpen, Loader2 } from 'lucide-react';
 import SprintsTab from '@/features/backlog/components/SprintsTab';
 import EpicsTab from '@/features/backlog/components/EpicsTab';
 import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
+import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
 
 export default function BacklogPage() {
     const [activeTab, setActiveTab] = useState<'sprints' | 'epics'>('sprints');
     const { selectedProject } = useProject();
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showCreateEpicModal, setShowCreateEpicModal] = useState(false);
+    const [editingEpic, setEditingEpic] = useState<EpicResponseDto | null>(null);
 
     const [sprints, setSprints] = useState<Sprint[]>([]);
     const [isLoadingSprints, setIsLoadingSprints] = useState(false);
 
+    const [epics, setEpics] = useState<EpicResponseDto[]>([]);
+    const [isLoadingEpics, setIsLoadingEpics] = useState(false);
+
+    const [loadError, setLoadError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (loadError) {
+            toast.error(loadError);
+        }
+    }, [loadError]);
+
     useEffect(() => {
         if (!selectedProject) {
             setSprints([]);
+            setEpics([]);
             return;
         }
 
-        const fetchSprints = async () => {
+        setLoadError(null);
+
+        const fetchAll = async () => {
             setIsLoadingSprints(true);
+            setIsLoadingEpics(true);
+
+            let sprintsResult: typeof sprints = [];
+            let epicsResult: typeof epics = [];
+            let hasError = false;
+
             try {
                 const result = await sprintService.getByProject(selectedProject.id);
                 if (result.success) {
-                    setSprints(result.data);
+                    sprintsResult = result.data;
                 } else {
                     console.error('Failed to fetch sprints:', result.errors);
-                    toast.error(result.errors.map(e => e.message).join(', ') || 'Could not load sprints.');
-                    setSprints([]);
+                    hasError = true;
                 }
             } catch (err) {
-                console.error('Failed to fetch sprints (exception):', err);
-                toast.error('Could not load sprints. Please try again.');
-                setSprints([]);
+                console.error('Failed to fetch sprints:', err);
+                hasError = true;
             } finally {
                 setIsLoadingSprints(false);
             }
+
+            try {
+                const result = await epicService.getByProject(selectedProject.id);
+                if (result.success) {
+                    epicsResult = result.data;
+                } else {
+                    console.error('Failed to fetch epics:', result.errors);
+                    hasError = true;
+                }
+            } catch (err) {
+                console.error('Failed to fetch epics:', err);
+                hasError = true;
+            } finally {
+                setIsLoadingEpics(false);
+            }
+
+            setSprints(sprintsResult);
+            setEpics(epicsResult);
+
+            if (hasError) {
+                setLoadError('Some data could not be loaded. Please refresh to try again.');
+            }
         };
 
-        fetchSprints();
+        fetchAll();
     }, [selectedProject]);
 
     const handleSprintCreated = (sprint: Sprint) => {
@@ -60,6 +104,22 @@ export default function BacklogPage() {
 
     const handleSprintDeleted = (sprintId: number) => {
         setSprints(prev => prev.filter(s => s.id !== sprintId));
+    };
+
+    const handleEpicCreated = (epic: EpicResponseDto) => {
+        setEpics(prev => [...prev, epic]);
+        setShowCreateEpicModal(false);
+        toast.success(`Epic "${epic.title}" created!`);
+    };
+
+    const handleEpicUpdated = (updatedEpic: EpicResponseDto) => {
+        setEpics(prev => prev.map(e => e.id === updatedEpic.id ? updatedEpic : e));
+        setEditingEpic(null);
+        toast.success(`Epic "${updatedEpic.title}" updated!`);
+    };
+
+    const handleEditEpic = (epic: EpicResponseDto) => {
+        setEditingEpic(epic);
     };
 
     const renderSprintsContent = () => {
@@ -77,11 +137,11 @@ export default function BacklogPage() {
             );
         }
 
-        if (isLoadingSprints) {
+        if (isLoadingSprints || isLoadingEpics) {
             return (
                 <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
                     <Loader2 size={20} className="animate-spin" />
-                    <span className="text-sm">Loading sprints for <strong>{selectedProject.name}</strong>…</span>
+                    <span className="text-sm">Loading data for <strong>{selectedProject.name}</strong>…</span>
                 </div>
             );
         }
@@ -91,7 +151,7 @@ export default function BacklogPage() {
                 sprints={sprints}
                 userStories={mockUserStories}
                 subtasks={mockSubTasks}
-                epics={mockEpics}
+                epics={epics}
                 onSprintDeleted={handleSprintDeleted}
             />
         );
@@ -155,10 +215,21 @@ export default function BacklogPage() {
                 {/* Content Area */}
                 <div className="min-h-[400px]">
                     {activeTab === 'sprints' ? renderSprintsContent() : (
-                        <EpicsTab
-                            epics={mockEpics}
-                            userStories={mockUserStories}
-                        />
+                        isLoadingEpics ? (
+                            <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
+                                <Loader2 size={20} className="animate-spin" />
+                                <span className="text-sm">Loading epics...</span>
+                            </div>
+                        ) : (
+                            <>
+                                {loadError && <div className="mb-4 p-3 text-sm text-red-500 bg-red-100 dark:bg-red-500/20 rounded-lg">{loadError}</div>}
+                                <EpicsTab
+                                    epics={epics}
+                                    onCreateEpic={() => setShowCreateEpicModal(true)}
+                                    onEditEpic={handleEditEpic}
+                                />
+                            </>
+                        )
                     )}
                 </div>
 
@@ -194,6 +265,31 @@ export default function BacklogPage() {
                     sprintDurationDays={selectedProject.sprintDurationDays}
                     onClose={() => setShowCreateModal(false)}
                     onCreated={handleSprintCreated}
+                />
+            )}
+
+            {/* Create Epic Modal */}
+            {showCreateEpicModal && selectedProject && (
+                <EpicModal
+                    mode="create"
+                    projectId={selectedProject.id}
+                    projectName={selectedProject.name}
+                    onClose={() => setShowCreateEpicModal(false)}
+                    onCreated={handleEpicCreated}
+                    onUpdated={() => {}}
+                />
+            )}
+
+            {/* Edit Epic Modal */}
+            {editingEpic && (
+                <EpicModal
+                    mode="edit"
+                    epic={editingEpic}
+                    projectId={editingEpic.projectId}
+                    projectName={selectedProject?.name || ''}
+                    onClose={() => setEditingEpic(null)}
+                    onCreated={() => {}}
+                    onUpdated={handleEpicUpdated}
                 />
             )}
         </>
