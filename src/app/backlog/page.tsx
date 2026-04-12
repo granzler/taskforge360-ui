@@ -136,6 +136,18 @@ export default function BacklogPage() {
         setSprints(prev => prev.filter(s => s.id !== sprintId));
     };
 
+    const handleStoryCreated = async (storyId: number) => {
+        try {
+            const result = await userStoryService.getById(storyId);
+            if (result.success && result.data) {
+                setUserStories(prev => [...prev, result.data]);
+                toast.success('User story created!');
+            }
+        } catch (err) {
+            console.error('Failed to refresh story:', err);
+        }
+    };
+
     const handleEpicCreated = (epic: EpicResponseDto) => {
         setEpics(prev => [...prev, epic]);
         setShowCreateEpicModal(false);
@@ -178,11 +190,14 @@ export default function BacklogPage() {
 
         return (
             <SprintsTab
+                projectId={selectedProject.id}
+                projectName={selectedProject.name}
                 sprints={sprints}
                 userStories={userStories}
                 subtasks={mockSubTasks}
                 epics={epics}
                 onSprintDeleted={handleSprintDeleted}
+                onStoryCreated={handleStoryCreated}
             />
         );
     };
