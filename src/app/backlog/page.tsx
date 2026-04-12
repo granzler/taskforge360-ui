@@ -15,6 +15,7 @@ import { Layers, Calendar, Plus, FolderOpen, Loader2 } from 'lucide-react';
 import SprintsTab from '@/features/backlog/components/SprintsTab';
 import EpicsTab from '@/features/backlog/components/EpicsTab';
 import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
+import CreateUserStoryModal from '@/features/backlog/components/CreateUserStoryModal';
 import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
 
@@ -23,6 +24,7 @@ export default function BacklogPage() {
     const { selectedProject } = useProject();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreateEpicModal, setShowCreateEpicModal] = useState(false);
+    const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
     const [editingEpic, setEditingEpic] = useState<EpicResponseDto | null>(null);
 
     const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -136,7 +138,8 @@ export default function BacklogPage() {
         setSprints(prev => prev.filter(s => s.id !== sprintId));
     };
 
-    const handleStoryCreated = async (storyId: number) => {
+    const handleStoryCreated = async (storyId?: number) => {
+        if (!storyId) return;
         try {
             const result = await userStoryService.getById(storyId);
             if (result.success && result.data) {
@@ -226,7 +229,11 @@ export default function BacklogPage() {
                             <Calendar size={16} />
                             Plan Sprint
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95">
+                        <button
+                            onClick={() => setShowCreateStoryModal(true)}
+                            disabled={!selectedProject}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
                             <Plus size={18} />
                             Create Story
                         </button>
@@ -336,6 +343,18 @@ export default function BacklogPage() {
                     onClose={() => setEditingEpic(null)}
                     onCreated={() => {}}
                     onUpdated={handleEpicUpdated}
+                />
+            )}
+
+            {/* Create User Story Modal */}
+            {showCreateStoryModal && selectedProject && (
+                <CreateUserStoryModal
+                    projectId={selectedProject.id}
+                    projectName={selectedProject.name}
+                    sprints={sprints}
+                    epics={epics}
+                    onClose={() => setShowCreateStoryModal(false)}
+                    onCreated={handleStoryCreated}
                 />
             )}
         </>
