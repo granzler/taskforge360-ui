@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Clock, Layers, Pencil, Mountain } from 'lucide-react';
+import { Plus, Layers, Pencil, Mountain } from 'lucide-react';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { UserStoryDto } from '@/domain/entities/UserStory';
 import { getEpicPriorityColor, getStatusIcon } from '@/lib/utils/colors';
