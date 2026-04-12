@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2 } from 'lucide-react';
-import { UserStory, SubTask, Epic } from '@/domain/entities/Project';
+import { SubTask, Epic } from '@/domain/entities/Project';
+import { UserStoryDto } from '@/domain/entities/UserStory';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { Sprint } from '@/domain/entities/Sprint';
 import { sprintService } from '@/infrastructure/services/sprintService';
@@ -12,13 +13,13 @@ import UserStoryItem from './UserStoryItem';
 type EpicItem = Epic | EpicResponseDto;
 
 interface SprintWithStories extends Sprint {
-    stories: UserStory[];
+    stories: UserStoryDto[];
     totalStoryPoints: number;
 }
 
 interface SprintsTabProps {
     sprints: Sprint[];
-    userStories: UserStory[];
+    userStories: UserStoryDto[];
     subtasks: SubTask[];
     epics: EpicItem[];
     onSprintDeleted: (sprintId: number) => void;

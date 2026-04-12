@@ -2,17 +2,19 @@
 
 import { Plus, Clock, Layers, Pencil, Mountain } from 'lucide-react';
 import { EpicResponseDto } from '@/domain/entities/Epic';
+import { UserStoryDto } from '@/domain/entities/UserStory';
 import { getEpicPriorityColor, getStatusIcon } from '@/lib/utils/colors';
-import { Status, getWorkItemPriorityLabel, EpicStatus, EPIC_STATUS_LABELS } from '@/domain/types';
+import { Status, getWorkItemPriorityLabel, EpicStatus, EPIC_STATUS_LABELS, USER_STORY_STATUS_LABELS, UserStoryStatus } from '@/domain/types';
 import { EmptyState } from '@/components/ui';
 
 interface EpicsTabProps {
     epics: EpicResponseDto[];
+    userStories: UserStoryDto[];
     onCreateEpic: () => void;
     onEditEpic: (epic: EpicResponseDto) => void;
 }
 
-export default function EpicsTab({ epics, onCreateEpic, onEditEpic }: EpicsTabProps) {
+export default function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic }: EpicsTabProps) {
     if (epics.length === 0) {
         return (
             <EmptyState
@@ -50,8 +52,9 @@ export default function EpicsTab({ epics, onCreateEpic, onEditEpic }: EpicsTabPr
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {sortedEpics.map(epic => {
-                const stories = epic.userStories || [];
-                const progress = stories.length > 0 ? (stories.filter(s => s.statusName?.toLowerCase() === 'done' || s.statusId === EpicStatus.Done).length / stories.length) * 100 : 0;
+                const stories = userStories.filter(s => s.epicId === epic.id);
+                const doneStories = stories.filter(s => s.statusId === UserStoryStatus.Done || s.statusName?.toLowerCase() === 'done');
+                const progress = stories.length > 0 ? (doneStories.length / stories.length) * 100 : 0;
 
                 return (
                     <div key={epic.id} className="rounded-xl border border-border bg-card shadow-md overflow-hidden flex flex-col hover:shadow-lg transition-shadow border-t-4 border-t-primary">
@@ -73,9 +76,6 @@ export default function EpicsTab({ epics, onCreateEpic, onEditEpic }: EpicsTabPr
                                     >
                                         <Pencil size={14} />
                                     </button>
-                                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                                        <Clock size={12} /> {epic.updatedAt || 'Recently'}
-                                    </span>
                                 </div>
                             </div>
                             <h3 className="font-bold text-lg mb-2">{epic.title}</h3>
@@ -106,7 +106,7 @@ export default function EpicsTab({ epics, onCreateEpic, onEditEpic }: EpicsTabPr
                             <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                                 {stories.map(s => (
                                     <div key={s.id} className="flex items-center gap-2 p-2 rounded-md bg-background border border-border/50 text-xs">
-                                        {getStatusIcon((s.statusName || 'To Do') as Status)}
+                                        {getStatusIcon((USER_STORY_STATUS_LABELS[s.statusId as UserStoryStatus] || s.statusName || 'To Do') as Status)}
                                         <span className="truncate flex-1">{s.title}</span>
                                         <span className="text-[10px] text-slate-400 font-mono">{s.storyPoints || 0}pt</span>
                                     </div>

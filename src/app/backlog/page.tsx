@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import {
-    mockUserStories,
     mockSubTasks
 } from '@/features/backlog/data/mockBacklogData';
 import { Sprint } from '@/domain/entities/Sprint';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { epicService } from '@/infrastructure/services/epicService';
+import { userStoryService } from '@/infrastructure/services/userStoryService';
+import { UserStoryDto } from '@/domain/entities/UserStory';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { Layers, Calendar, Plus, FolderOpen, Loader2 } from 'lucide-react';
@@ -30,6 +31,9 @@ export default function BacklogPage() {
     const [epics, setEpics] = useState<EpicResponseDto[]>([]);
     const [isLoadingEpics, setIsLoadingEpics] = useState(false);
 
+    const [userStories, setUserStories] = useState<UserStoryDto[]>([]);
+    const [isLoadingStories, setIsLoadingStories] = useState(false);
+
     const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -50,9 +54,11 @@ export default function BacklogPage() {
         const fetchAll = async () => {
             setIsLoadingSprints(true);
             setIsLoadingEpics(true);
+            setIsLoadingStories(true);
 
             let sprintsResult: typeof sprints = [];
             let epicsResult: typeof epics = [];
+            let allStories: UserStoryDto[] = [];
             let hasError = false;
 
             try {
@@ -84,9 +90,33 @@ export default function BacklogPage() {
             } finally {
                 setIsLoadingEpics(false);
             }
+            
+            try {
+                const backlogResult = await userStoryService.getBacklog(selectedProject.id);
+                if (backlogResult.success) {
+                    allStories = [...backlogResult.data];
+                } else {
+                    console.error('Failed to fetch backlog stories:', backlogResult.errors);
+                    hasError = true;
+                }
+                
+                // Fetch stories for all sprints
+                for (const sprint of sprintsResult) {
+                    const sprintStoriesResult = await userStoryService.getBySprint(sprint.id);
+                    if (sprintStoriesResult.success) {
+                        allStories = [...allStories, ...sprintStoriesResult.data];
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch user stories:', err);
+                hasError = true;
+            } finally {
+                setIsLoadingStories(false);
+            }
 
             setSprints(sprintsResult);
             setEpics(epicsResult);
+            setUserStories(allStories);
 
             if (hasError) {
                 setLoadError('Some data could not be loaded. Please refresh to try again.');
@@ -137,7 +167,7 @@ export default function BacklogPage() {
             );
         }
 
-        if (isLoadingSprints || isLoadingEpics) {
+        if (isLoadingSprints || isLoadingEpics || isLoadingStories) {
             return (
                 <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
                     <Loader2 size={20} className="animate-spin" />
@@ -149,7 +179,7 @@ export default function BacklogPage() {
         return (
             <SprintsTab
                 sprints={sprints}
-                userStories={mockUserStories}
+                userStories={userStories}
                 subtasks={mockSubTasks}
                 epics={epics}
                 onSprintDeleted={handleSprintDeleted}
@@ -225,6 +255,7 @@ export default function BacklogPage() {
                                 {loadError && <div className="mb-4 p-3 text-sm text-red-500 bg-red-100 dark:bg-red-500/20 rounded-lg">{loadError}</div>}
                                 <EpicsTab
                                     epics={epics}
+                                    userStories={userStories}
                                     onCreateEpic={() => setShowCreateEpicModal(true)}
                                     onEditEpic={handleEditEpic}
                                 />

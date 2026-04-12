@@ -1,12 +1,14 @@
 'use client';
 
 import { ChevronDown, ChevronRight, Target, User, Plus } from 'lucide-react';
-import { Epic, UserStory, SubTask } from '@/domain/entities/Project';
+import { Epic, SubTask } from '@/domain/entities/Project';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import { getPriorityColor, getStatusIcon } from '@/lib/utils/colors';
+import { UserStoryDto } from '@/domain/entities/UserStory';
+import { getEpicPriorityColor, getStatusIcon, getPriorityColor } from '@/lib/utils/colors';
+import { USER_STORY_STATUS_LABELS, UserStoryStatus, Status } from '@/domain/types';
 
 interface UserStoryItemProps {
-    story: UserStory;
+    story: UserStoryDto;
     isExpanded: boolean;
     onToggle: (id: number) => void;
     subtasks: SubTask[];
@@ -24,7 +26,7 @@ export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, e
                     <div className="text-slate-400 group-hover:text-primary transition-colors">
                         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </div>
-                    {getStatusIcon(story.status)}
+                    {getStatusIcon(USER_STORY_STATUS_LABELS[story.statusId as UserStoryStatus] as Status || 'To Do')}
                     <span className="font-medium text-sm">{story.title}</span>
                     {epic && (
                         <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
@@ -34,8 +36,8 @@ export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, e
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getPriorityColor(story.priority)}`}>
-                        {story.priority}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getEpicPriorityColor(story.priority)}`}>
+                        {story.priority === 1 ? 'Low' : story.priority === 2 ? 'Medium' : story.priority === 3 ? 'High' : 'Critical'}
                     </span>
                     <div className="flex items-center gap-1 text-slate-400 text-xs">
                         <Target size={12} />
