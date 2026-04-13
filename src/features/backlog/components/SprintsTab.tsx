@@ -10,6 +10,7 @@ import { sprintService } from '@/infrastructure/services/sprintService';
 import { toast } from 'react-hot-toast';
 import UserStoryItem from './UserStoryItem';
 import CreateUserStoryModal from './CreateUserStoryModal';
+import EditUserStoryModal from './EditUserStoryModal';
 
 type EpicItem = Epic | EpicResponseDto;
 
@@ -50,6 +51,7 @@ export default function SprintsTab({
     // Modal states
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [createModalSprintId, setCreateModalSprintId] = useState<number | undefined>(undefined);
+    const [editingStory, setEditingStory] = useState<UserStoryDto | null>(null);
 
     const toggleSprint = (id: number) => {
         setExpandedSprints(prev =>
@@ -180,12 +182,13 @@ export default function SprintsTab({
                     {expandedSprints.includes(sprint.id) && (
                         <div className="p-4 border-t border-border bg-background/20 rounded-b-xl">
                             {sprint.stories.length > 0 ? (
-                                sprint.stories.map(story => (
+                                sprint.stories.map((story, idx) => (
                                     <UserStoryItem
-                                        key={story.id}
+                                        key={`${story.id}-${idx}`}
                                         story={story}
                                         isExpanded={expandedStories.includes(story.id)}
                                         onToggle={toggleStory}
+                                        onEdit={(story) => setEditingStory(story)}
                                         subtasks={subtasks.filter(st => st.userStoryId === story.id)}
                                         epic={epics.find(e => e.id === story.epicId)}
                                     />
@@ -228,12 +231,13 @@ export default function SprintsTab({
 
             <div className="p-4 rounded-xl border border-border bg-background shadow-sm">
                 {unassignedStories.length > 0 ? (
-                    unassignedStories.map(story => (
+                    unassignedStories.map((story, idx) => (
                         <UserStoryItem
-                            key={story.id}
+                            key={`unassigned-${story.id}-${idx}`}
                             story={story}
                             isExpanded={expandedStories.includes(story.id)}
                             onToggle={toggleStory}
+                            onEdit={(story) => setEditingStory(story)}
                             subtasks={subtasks.filter(st => st.userStoryId === story.id)}
                             epic={epics.find(e => e.id === story.epicId)}
                         />
@@ -297,6 +301,20 @@ export default function SprintsTab({
                             onStoryCreated(storyId);
                         }
                     }}
+                />
+            )}
+
+            {/* Edit User Story Modal */}
+            {editingStory && (
+                <EditUserStoryModal
+                    story={editingStory}
+                    isOpen={!!editingStory}
+                    onClose={() => setEditingStory(null)}
+                    onUpdated={(story) => {
+                        onStoryCreated(story.id);
+                    }}
+                    sprints={sprints}
+                    epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
                 />
             )}
         </div>

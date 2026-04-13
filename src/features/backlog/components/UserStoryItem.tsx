@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Target, User, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Target, User, Plus, Pencil } from 'lucide-react';
 import { Epic, SubTask } from '@/domain/entities/Project';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { UserStoryDto } from '@/domain/entities/UserStory';
@@ -11,11 +11,12 @@ interface UserStoryItemProps {
     story: UserStoryDto;
     isExpanded: boolean;
     onToggle: (id: number) => void;
+    onEdit?: (story: UserStoryDto) => void;
     subtasks: SubTask[];
     epic?: Epic | EpicResponseDto;
 }
 
-export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, epic }: UserStoryItemProps) {
+export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, subtasks, epic }: UserStoryItemProps) {
     return (
         <div className="mb-2 group">
             <div
@@ -69,6 +70,17 @@ export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, e
                     <button className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1">
                         <Plus size={10} /> Add Subtask
                     </button>
+                    {isExpanded && onEdit && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(story);
+                            }}
+                            className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1"
+                        >
+                            <Pencil size={10} /> Edit Story
+                        </button>
+                    )}
                 </div>
             )}
         </div>

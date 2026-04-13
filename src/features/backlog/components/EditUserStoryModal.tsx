@@ -2,47 +2,46 @@
 
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useCreateUserStory } from '../hooks/useCreateUserStory';
-import { CreateUserStoryRequestDto } from '@/domain/entities/UserStory';
+import { useUpdateUserStory } from '../hooks/useUpdateUserStory';
+import { UserStoryDto, UpdateUserStoryRequestDto } from '@/domain/entities/UserStory';
 import { Sprint } from '@/domain/entities/Sprint';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import { UserStoryStatus } from '@/domain/types';
 import UserStoryForm from './UserStoryForm';
 
-interface CreateUserStoryModalProps {
-    projectId: number;
-    projectName: string;
+interface EditUserStoryModalProps {
+    story: UserStoryDto;
+    isOpen: boolean;
+    onClose: () => void;
+    onUpdated: (story: UserStoryDto) => void;
     sprints?: Sprint[];
     epics?: EpicResponseDto[];
-    sprintId?: number;
-    epicId?: number;
-    onClose: () => void;
-    onCreated: (storyId?: number) => void;
 }
 
-export default function CreateUserStoryModal({
-    projectId,
-    projectName,
+export default function EditUserStoryModal({
+    story,
+    isOpen,
+    onClose,
+    onUpdated,
     sprints = [],
     epics = [],
-    sprintId,
-    epicId,
-    onClose,
-    onCreated,
-}: CreateUserStoryModalProps) {
-    const { create, isLoading } = useCreateUserStory({
-        onSuccess: (story) => {
-            onCreated(story.id);
+}: EditUserStoryModalProps) {
+    const { update, isLoading } = useUpdateUserStory({
+        onSuccess: (updatedStory) => {
+            onUpdated(updatedStory);
+            onClose();
         },
     });
 
     useEffect(() => {
+        if (!isOpen) return;
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
         };
         window.addEventListener('keydown', handleKey);
         return () => window.removeEventListener('keydown', handleKey);
-    }, [onClose]);
+    }, [isOpen, onClose]);
+
+    if (!isOpen) return null;
 
     const handleSubmit = async (data: {
         title: string;
@@ -55,7 +54,7 @@ export default function CreateUserStoryModal({
         projectId: number;
         priority: number;
     }) => {
-        const dto: CreateUserStoryRequestDto = {
+        const dto: UpdateUserStoryRequestDto = {
             title: data.title,
             description: data.description,
             storyPoints: data.storyPoints,
@@ -67,7 +66,7 @@ export default function CreateUserStoryModal({
             priority: data.priority,
         };
 
-        await create(dto);
+        await update(story.id, dto);
     };
 
     return (
@@ -84,8 +83,8 @@ export default function CreateUserStoryModal({
                 >
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                         <div>
-                            <h2 className="text-base font-bold">Create User Story</h2>
-                            <p className="text-xs text-muted-foreground mt-0.5">{projectName}</p>
+                            <h2 className="text-base font-bold">Edit User Story</h2>
+                            <p className="text-xs text-muted-foreground mt-0.5">{story.title}</p>
                         </div>
                         <button
                             onClick={onClose}
@@ -98,22 +97,22 @@ export default function CreateUserStoryModal({
                     <div className="px-6 py-5">
                         <UserStoryForm
                             initialData={{
-                                title: '',
-                                description: undefined,
-                                storyPoints: undefined,
-                                statusId: UserStoryStatus.Backlog,
-                                acceptanceCriteria: undefined,
-                                sprintId: sprintId,
-                                epicId: epicId,
+                                title: story.title,
+                                description: story.description,
+                                storyPoints: story.storyPoints,
+                                statusId: story.statusId,
+                                acceptanceCriteria: story.acceptanceCriteria,
+                                sprintId: story.sprintId,
+                                epicId: story.epicId,
                             }}
-                            projectId={projectId}
+                            projectId={story.projectId}
                             sprints={sprints}
                             epics={epics}
-                            isSprintReadOnly={!!sprintId}
+                            isSprintReadOnly={!!story.sprintId}
                             isLoading={isLoading}
                             onSubmit={handleSubmit}
                             onCancel={onClose}
-                            submitLabel="Create Story"
+                            submitLabel="Save Changes"
                         />
                     </div>
                 </div>

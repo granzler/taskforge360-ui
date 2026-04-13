@@ -1,58 +1,187 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import MockAdapter from 'axios-mock-adapter';
-import api from '@/infrastructure/api/axios';
-import { userStoryService } from '@/infrastructure/services/userStoryService';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useCreateUserStory } from '../../../features/backlog/hooks/useCreateUserStory';
 import { CreateUserStoryRequestDto, UserStoryDto } from '@/domain/entities/UserStory';
 
-// Mock next-auth/react to prevent fetch errors during tests
-vi.mock('next-auth/react', () => ({
-  getSession: vi.fn().mockResolvedValue({ accessToken: 'fake-token' }),
-  signOut: vi.fn(),
+vi.mock('@/infrastructure/services/userStoryService', () => ({
+  userStoryService: {
+    create: vi.fn(),
+  },
 }));
 
-describe('userStoryService', () => {
-  let mock: MockAdapter;
+vi.mock('react-hot-toast', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
+import { userStoryService } from '@/infrastructure/services/userStoryService';
+import { toast } from 'react-hot-toast';
+
+const mockUserStoryService = userStoryService as ReturnType<typeof vi.mocked<typeof userStoryService>>;
+const mockToast = toast as ReturnType<typeof vi.mocked<typeof toast>>;
+
+describe('useCreateUserStory', () => {
   beforeEach(() => {
-    mock = new MockAdapter(api);
+    vi.clearAllMocks();
   });
 
-  it('should create a user story successfully', async () => {
-    const createRequest: CreateUserStoryRequestDto = {
-      title: 'Test User Story',
-      description: 'Test Description',
-      projectId: 1,
-      epicId: 1,
-      sprintId: 1,
-      priority: 1,
-      statusId: 1
-    };
-
-    const responseDto: UserStoryDto = {
+  it('should create user story successfully', async () => {
+    const mockStory: UserStoryDto = {
       id: 1,
-      title: 'Test User Story',
-      description: 'Test Description',
-      projectId: 1,
-      epicId: 1,
-      sprintId: 1,
-      priority: 1,
+      title: 'New Story',
       statusId: 1,
-      statusName: 'To Do'
+      statusName: 'Backlog',
+      priority: 2,
+      projectId: 1,
     };
 
-    const responseData = {
+    mockUserStoryService.create.mockResolvedValue({
       success: true,
-      data: responseDto
+      data: mockStory,
+    });
+
+    const { result } = renderHook(() => useCreateUserStory());
+
+    await act(async () => {
+      const success = await result.current.create({
+        title: 'New Story',
+        statusId: 1,
+        priority: 2,
+        projectId: 1,
+      } as CreateUserStoryRequestDto);
+      expect(success).toBe(true);
+    });
+
+    expect(mockUserStoryService.create).toHaveBeenCalledWith({
+      title: 'New Story',
+      statusId: 1,
+      priority: 2,
+      projectId: 1,
+    });
+    expect(mockToast.success).toHaveBeenCalledWith('User story "New Story" created!');
+  });
+
+  it('should handle create failure', async () => {
+    mockUserStoryService.create.mockResolvedValue({
+      success: false,
+      errors: [{ code: 'VALIDATION_ERROR', message: 'Title required', type: 'Validation' }],
+    });
+
+    const { result } = renderHook(() => useCreateUserStory());
+
+    await act(async () => {
+      const success = await result.current.create({
+        title: '',
+        statusId: 1,
+        priority: 2,
+        projectId: 1,
+      } as CreateUserStoryRequestDto);
+      expect(success).toBe(false);
+    });
+
+    expect(mockToast.error).toHaveBeenCalledWith('Title required');
+  });
+
+  it('should handle exception', async () => {
+    mockUserStoryService.create.mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useCreateUserStory());
+
+    await act(async () => {
+      const success = await result.current.create({
+        title: 'Test',
+        statusId: 1,
+        priority: 2,
+        projectId: 1,
+      } as CreateUserStoryRequestDto);
+      expect(success).toBe(false);
+    });
+
+    expect(mockToast.error).toHaveBeenCalledWith('Could not create user story. Please try again.');
+  });
+
+  it('should set loading state during create', async () => {
+    let resolvePromise: (value: unknown) => void;
+    const promise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    mockUserStoryService.create.mockReturnValue(promise as never);
+
+    const { result } = renderHook(() => useCreateUserStory());
+
+    expect(result.current.isLoading).toBe(false);
+
+    act(() => {
+      result.current.create({
+        title: 'Test',
+        statusId: 1,
+        priority: 2,
+        projectId: 1,
+      } as CreateUserStoryRequestDto);
+    });
+
+    expect(result.current.isLoading).toBe(true);
+
+    await act(async () => {
+      resolvePromise!({ success: true, data: { id: 1, title: 'Test', statusId: 1, priority: 2, projectId: 1 } });
+    });
+
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('should call onSuccess callback', async () => {
+    const mockStory: UserStoryDto = {
+      id: 1,
+      title: 'Created Story',
+      statusId: 2,
+      statusName: 'To Do',
+      priority: 3,
+      projectId: 1,
     };
 
-    mock.onPost('/api/userstories').reply(200, responseData);
+    mockUserStoryService.create.mockResolvedValue({
+      success: true,
+      data: mockStory,
+    });
 
-    const result = await userStoryService.create(createRequest);
+    const onSuccess = vi.fn();
 
-    expect(result.success).toBe(true);
-    if (result.success && 'data' in result) {
-      expect(result.data.id).toBe(1);
-      expect(result.data.title).toBe('Test User Story');
-    }
+    const { result } = renderHook(() => useCreateUserStory({ onSuccess }));
+
+    await act(async () => {
+      await result.current.create({
+        title: 'Created Story',
+        statusId: 2,
+        priority: 3,
+        projectId: 1,
+      } as CreateUserStoryRequestDto);
+    });
+
+    expect(onSuccess).toHaveBeenCalledWith(mockStory);
+  });
+
+  it('should call onError callback on failure', async () => {
+    mockUserStoryService.create.mockResolvedValue({
+      success: false,
+      errors: [{ code: 'ERROR', message: 'Error', type: 'Error' }],
+    });
+
+    const onError = vi.fn();
+
+    const { result } = renderHook(() => useCreateUserStory({ onError }));
+
+    await act(async () => {
+      await result.current.create({
+        title: 'Test',
+        statusId: 1,
+        priority: 2,
+        projectId: 1,
+      } as CreateUserStoryRequestDto);
+    });
+
+    expect(onError).toHaveBeenCalledWith('Error');
   });
 });
