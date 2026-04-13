@@ -68,11 +68,12 @@ export default function BacklogPage() {
                 if (result.success) {
                     sprintsResult = result.data;
                 } else {
-                    console.error('Failed to fetch sprints:', result.errors);
+                    toast.error(result.errors?.map(e => e.message).join(', ') || 'Failed to fetch sprints.');
                     hasError = true;
                 }
             } catch (err) {
                 console.error('Failed to fetch sprints:', err);
+                toast.error('Failed to fetch sprints. Please try again.');
                 hasError = true;
             } finally {
                 setIsLoadingSprints(false);
@@ -83,11 +84,12 @@ export default function BacklogPage() {
                 if (result.success) {
                     epicsResult = result.data;
                 } else {
-                    console.error('Failed to fetch epics:', result.errors);
+                    toast.error(result.errors?.map(e => e.message).join(', ') || 'Failed to fetch epics.');
                     hasError = true;
                 }
             } catch (err) {
                 console.error('Failed to fetch epics:', err);
+                toast.error('Failed to fetch epics. Please try again.');
                 hasError = true;
             } finally {
                 setIsLoadingEpics(false);
@@ -98,7 +100,7 @@ export default function BacklogPage() {
                 if (backlogResult.success) {
                     allStories = [...backlogResult.data];
                 } else {
-                    console.error('Failed to fetch backlog stories:', backlogResult.errors);
+                    toast.error(backlogResult.errors?.map(e => e.message).join(', ') || 'Failed to fetch backlog stories.');
                     hasError = true;
                 }
                 

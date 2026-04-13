@@ -1,5 +1,4 @@
 import api from '../api/axios';
-import { ApiError } from '@/domain/types';
 import { Result } from '@/domain/types';
 import { handleApiCall } from '../api/apiHelper';
 import { 
@@ -8,75 +7,55 @@ import {
     UpdateUserStoryRequestDto 
 } from '@/domain/entities/UserStory';
 
-const BASE_URL = '/api/userstories';
-
-interface ApiResponse<T> {
-    success: boolean;
-    data: T;
-    errors?: ApiError[];
-}
+const BASE_URL = '/api/UserStories';
 
 export const userStoryService = {
     getBacklog: (projectId: number): Promise<Result<UserStoryDto[]>> => {
         return handleApiCall(async () => {
-            const response = await api.get<ApiResponse<UserStoryDto[]>>(`${BASE_URL}/backlog/${projectId}`);
-            const data = response.data;
-            if (data?.success) return data.data;
-            throw data;
-        }) as Promise<Result<UserStoryDto[]>>;
+            const response = await api.get<UserStoryDto[]>(`${BASE_URL}/backlog/${projectId}`);
+            return response.data;
+        });
     },
 
     getByEpic: (epicId: number): Promise<Result<UserStoryDto[]>> => {
         return handleApiCall(async () => {
-            const response = await api.get<ApiResponse<UserStoryDto[]>>(`${BASE_URL}/epic/${epicId}`);
-            const data = response.data;
-            if (data?.success) return data.data;
-            throw data;
-        }) as Promise<Result<UserStoryDto[]>>;
+            const response = await api.get<UserStoryDto[]>(`${BASE_URL}/epic/${epicId}`);
+            return response.data;
+        });
     },
 
     getBySprint: (sprintId: number): Promise<Result<UserStoryDto[]>> => {
         return handleApiCall(async () => {
-            const response = await api.get<ApiResponse<UserStoryDto[]>>(`${BASE_URL}/sprint/${sprintId}`);
-            const data = response.data;
-            if (data?.success) return data.data;
-            throw data;
-        }) as Promise<Result<UserStoryDto[]>>;
+            const response = await api.get<UserStoryDto[]>(`${BASE_URL}/sprint/${sprintId}`);
+            return response.data;
+        });
     },
 
     getById: (id: number): Promise<Result<UserStoryDto>> => {
         return handleApiCall(async () => {
-            const response = await api.get<ApiResponse<UserStoryDto>>(`${BASE_URL}/${id}`);
-            const data = response.data;
-            if (data?.success) return data.data;
-            throw data;
-        }) as Promise<Result<UserStoryDto>>;
+            const response = await api.get<UserStoryDto>(`${BASE_URL}/${id}`);
+            return response.data;
+        });
     },
 
     create: (createData: CreateUserStoryRequestDto): Promise<Result<UserStoryDto>> => {
         return handleApiCall(async () => {
-            const response = await api.post<ApiResponse<UserStoryDto>>(BASE_URL, createData);
-            const data = response.data;
-            if (data?.success) return data.data;
-            throw data;
-        }) as Promise<Result<UserStoryDto>>;
+            const response = await api.post<UserStoryDto>(BASE_URL, createData);
+            return response.data;
+        });
     },
 
     update: (id: number, updateData: UpdateUserStoryRequestDto): Promise<Result<UserStoryDto>> => {
         return handleApiCall(async () => {
-            const response = await api.put<ApiResponse<UserStoryDto>>(`${BASE_URL}/${id}`, updateData);
-            const data = response.data;
-            if (data?.success) return data.data;
-            throw data;
-        }) as Promise<Result<UserStoryDto>>;
+            const response = await api.put<UserStoryDto>(`${BASE_URL}/${id}`, updateData);
+            return response.data;
+        });
     },
 
     delete: (id: number): Promise<Result<null>> => {
         return handleApiCall(async () => {
-            const response = await api.delete<ApiResponse<null>>(`${BASE_URL}/${id}`);
-            const data = response.data;
-            if (data?.success) return data.data;
-            throw data;
-        }) as Promise<Result<null>>;
+            await api.delete(`${BASE_URL}/${id}`);
+            return null;
+        });
     }
 };
