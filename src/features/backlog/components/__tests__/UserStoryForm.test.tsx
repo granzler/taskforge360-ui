@@ -1,20 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UserStoryForm from '../UserStoryForm';
-import { UserStoryStatus } from '@/domain/types';
 
-vi.mock('react-hot-toast', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
+vi.mock('@/infrastructure/services/projectService', () => ({
+  projectService: {
+    getProjectUsers: vi.fn().mockResolvedValue({ success: true, data: [] }),
+    searchUsers: vi.fn().mockResolvedValue({ success: true, data: [] }),
   },
+}));
+
+vi.mock('@/features/labels/components/LabelSelector', () => ({
+  LabelSelector: ({ selectedLabelIds, onChange }: { selectedLabelIds: number[]; onChange: (ids: number[]) => void }) => (
+    <div data-testid="label-selector">
+      <span>Labels: {selectedLabelIds.length}</span>
+      <button type="button" onClick={() => onChange([1, 2])}>Add Labels</button>
+    </div>
+  ),
+}));
+
+vi.mock('../UserStoryAssigneeSelector', () => ({
+  default: () => (
+    <div data-testid="assignee-selector">
+      <span>Unassigned</span>
+    </div>
+  ),
 }));
 
 describe('UserStoryForm', () => {
   const defaultProps = {
     projectId: 1,
-    projectName: 'Test Project',
     isLoading: false,
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
@@ -35,6 +50,8 @@ describe('UserStoryForm', () => {
     expect(screen.getByLabelText(/sprint/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/epic/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/acceptance criteria/i)).toBeInTheDocument();
+    expect(screen.getByTestId('assignee-selector')).toBeInTheDocument();
+    expect(screen.getByTestId('label-selector')).toBeInTheDocument();
   });
 
   it('should pre-fill form with initial data', () => {
@@ -42,7 +59,7 @@ describe('UserStoryForm', () => {
       title: 'Initial Title',
       description: 'Initial Description',
       storyPoints: 5,
-      statusId: UserStoryStatus.InProgress,
+      statusId: 2,
       acceptanceCriteria: 'AC 1',
       sprintId: 1,
       epicId: 2,
@@ -56,7 +73,7 @@ describe('UserStoryForm', () => {
     expect(screen.getByDisplayValue('AC 1')).toBeInTheDocument();
   });
 
-  it('should validate title is required', async () => {
+  it('should validate title is required', () => {
     render(<UserStoryForm {...defaultProps} />);
 
     const submitButton = screen.getByRole('button', { name: 'Submit' });
@@ -84,13 +101,15 @@ describe('UserStoryForm', () => {
     const submitButton = screen.getByRole('button', { name: 'Submit' });
     await userEvent.click(submitButton);
 
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'New Story',
-        projectId: 1,
-        priority: 2,
-      })
-    );
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'New Story',
+          projectId: 1,
+          priority: 2,
+        })
+      );
+    });
   });
 
   it('should call onCancel when cancel clicked', async () => {
@@ -123,5 +142,48 @@ describe('UserStoryForm', () => {
     );
 
     expect(screen.getByText('Sprint 1')).toBeInTheDocument();
+  });
+
+  it('should include labelIds in submit data when labels are selected', async () => {
+    const onSubmit = vi.fn();
+
+    render(<UserStoryForm {...defaultProps} onSubmit={onSubmit} />);
+
+    const titleInput = screen.getByLabelText(/title/i);
+    await userEvent.type(titleInput, 'Test Story');
+
+    const labelButton = screen.getByRole('button', { name: 'Add Labels' });
+    await userEvent.click(labelButton);
+
+    const submitButton = screen.getByRole('button', { name: 'Submit' });
+    await userEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          labelIds: [1, 2],
+        })
+      );
+    });
+  });
+
+  it('should include assignedTo field in submit data', async () => {
+    const onSubmit = vi.fn();
+
+    render(<UserStoryForm {...defaultProps} onSubmit={onSubmit} />);
+
+    const titleInput = screen.getByLabelText(/title/i);
+    await userEvent.type(titleInput, 'Test Story');
+
+    const submitButton = screen.getByRole('button', { name: 'Submit' });
+    await userEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assignedTo: undefined,
+        })
+      );
+    });
   });
 });

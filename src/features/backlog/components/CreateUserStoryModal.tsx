@@ -54,6 +54,8 @@ export default function CreateUserStoryModal({
         epicId?: number;
         projectId: number;
         priority: number;
+        assignedTo?: string;
+        labelIds?: number[];
     }) => {
         const dto: CreateUserStoryRequestDto = {
             title: data.title,
@@ -65,6 +67,8 @@ export default function CreateUserStoryModal({
             epicId: data.epicId,
             projectId: data.projectId,
             priority: data.priority,
+            assignedTo: data.assignedTo,
+            labelIds: data.labelIds,
         };
 
         await create(dto);

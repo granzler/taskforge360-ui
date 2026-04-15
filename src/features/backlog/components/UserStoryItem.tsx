@@ -6,6 +6,7 @@ import { EpicResponseDto } from '@/domain/entities/Epic';
 import { UserStoryDto } from '@/domain/entities/UserStory';
 import { getEpicPriorityColor, getStatusIcon, getPriorityColor } from '@/lib/utils/colors';
 import { USER_STORY_STATUS_LABELS, UserStoryStatus, Status } from '@/domain/types';
+import { LabelBadge } from '@/features/labels/components/LabelBadge';
 
 interface UserStoryItemProps {
     story: UserStoryDto;
@@ -28,9 +29,21 @@ export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, sub
                         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </div>
                     {getStatusIcon(USER_STORY_STATUS_LABELS[story.statusId as UserStoryStatus] as Status || 'To Do')}
-                    <span className="font-medium text-sm">{story.title}</span>
+                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate">{story.title}</span>
+                        {story.labels && story.labels.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {story.labels.slice(0, 3).map(label => (
+                                    <LabelBadge key={label.id} tagName={label.tagName} className="text-[9px]" />
+                                ))}
+                                {story.labels.length > 3 && (
+                                    <span className="text-[9px] text-slate-400">+{story.labels.length - 3}</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     {epic && (
-                        <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                        <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 shrink-0">
                             {epic.title}
                         </span>
                     )}
@@ -44,8 +57,8 @@ export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, sub
                         <Target size={12} />
                         <span>{story.storyPoints} pts</span>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold border border-border">
-                        {story.assigneeId ? 'JD' : <User size={14} className="text-slate-400" />}
+                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold border border-border" title={story.assignedTo || 'Unassigned'}>
+                        {story.assignedTo ? story.assignedTo.charAt(0).toUpperCase() : <User size={14} className="text-slate-400" />}
                     </div>
                 </div>
             </div>

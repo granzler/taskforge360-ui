@@ -1,4 +1,5 @@
 import { SubTask } from './Project';
+import { GlobalLabelDto } from './GlobalLabel';
 
 export interface CreateUserStoryRequestDto {
     title: string;
@@ -10,6 +11,8 @@ export interface CreateUserStoryRequestDto {
     projectId: number;
     storyPoints?: number;
     acceptanceCriteria?: string;
+    assignedTo?: string;
+    labelIds?: number[];
 }
 
 export interface UpdateUserStoryRequestDto {
@@ -22,6 +25,8 @@ export interface UpdateUserStoryRequestDto {
     projectId: number;
     storyPoints?: number;
     acceptanceCriteria?: string;
+    assignedTo?: string;
+    labelIds?: number[];
 }
 
 export interface UserStoryDto {
@@ -39,5 +44,6 @@ export interface UserStoryDto {
     storyPoints?: number;
     acceptanceCriteria?: string;
     subTasks?: SubTask[];
-    assigneeId?: string;
+    assignedTo?: string;
+    labels?: GlobalLabelDto[];
 }

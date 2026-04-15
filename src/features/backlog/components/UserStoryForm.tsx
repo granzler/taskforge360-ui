@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, AlignLeft, Hash, Flag, CheckSquare, FolderKanban, Loader2 } from 'lucide-react';
 import { UserStoryStatus } from '@/domain/types';
 import { Sprint } from '@/domain/entities/Sprint';
 import { EpicResponseDto } from '@/domain/entities/Epic';
+import { UserSearchResult } from '@/domain/entities/User';
+import { projectService } from '@/infrastructure/services/projectService';
+import { LabelSelector } from '@/features/labels/components/LabelSelector';
+import UserStoryAssigneeSelector from './UserStoryAssigneeSelector';
 
 interface UserStoryFormProps {
     initialData?: {
@@ -15,6 +19,8 @@ interface UserStoryFormProps {
         acceptanceCriteria?: string;
         sprintId?: number;
         epicId?: number;
+        assignedTo?: string;
+        labelIds?: number[];
     };
     projectId: number;
     sprints?: Sprint[];
@@ -31,6 +37,8 @@ interface UserStoryFormProps {
         epicId?: number;
         projectId: number;
         priority: number;
+        assignedTo?: string;
+        labelIds?: number[];
     }) => void;
     onCancel: () => void;
     submitLabel: string;
@@ -54,6 +62,60 @@ export default function UserStoryForm({
     const [acceptanceCriteria, setAcceptanceCriteria] = useState(initialData?.acceptanceCriteria || '');
     const [selectedSprintId, setSelectedSprintId] = useState<number | undefined>(initialData?.sprintId);
     const [selectedEpicId, setSelectedEpicId] = useState<number | undefined>(initialData?.epicId);
+    const [assignedUser, setAssignedUser] = useState<UserSearchResult | null>(null);
+    const [isLoadingAssignee, setIsLoadingAssignee] = useState(!!initialData?.assignedTo);
+    const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>(initialData?.labelIds || []);
+
+    useEffect(() => {
+        const assignedTo = initialData?.assignedTo;
+        if (!assignedTo) {
+            setIsLoadingAssignee(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const loadUser = async () => {
+            try {
+                const projectUsersResult = await projectService.getProjectUsers(projectId);
+                
+                if (cancelled) return;
+                
+                let found = null;
+                
+                if (projectUsersResult.success && projectUsersResult.data.length > 0) {
+                    found = projectUsersResult.data.find(u => u.id === assignedTo);
+                }
+                
+                if (!found && assignedTo.length >= 3) {
+                    const searchResult = await projectService.searchUsers(assignedTo);
+                    if (!cancelled && searchResult.success) {
+                        found = searchResult.data.find(u => u.id === assignedTo);
+                    }
+                }
+                
+                if (found) {
+                    setAssignedUser(found);
+                } else {
+                    setAssignedUser({ id: assignedTo, username: assignedTo, displayName: assignedTo, email: '' });
+                }
+            } catch {
+                if (!cancelled) {
+                    setAssignedUser({ id: assignedTo, username: assignedTo, displayName: assignedTo, email: '' });
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoadingAssignee(false);
+                }
+            }
+        };
+
+        loadUser();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [initialData?.assignedTo, projectId]);
 
     const isValid = title.trim().length > 0;
 
@@ -71,6 +133,8 @@ export default function UserStoryForm({
             epicId: selectedEpicId,
             projectId,
             priority: 2,
+            assignedTo: assignedUser?.id,
+            labelIds: selectedLabelIds,
         });
     };
 
@@ -202,6 +266,29 @@ export default function UserStoryForm({
                     placeholder="Enter acceptance criteria (one per line)..."
                     rows={3}
                     className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all placeholder:text-muted-foreground resize-none"
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                {isLoadingAssignee ? (
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">Assignee</label>
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-secondary/50 border border-secondary rounded-lg">
+                            <Loader2 size={14} className="animate-spin" />
+                            Loading...
+                        </div>
+                    </div>
+                ) : (
+                    <UserStoryAssigneeSelector
+                        assignedUser={assignedUser}
+                        onAssign={(user) => setAssignedUser(user)}
+                        onRemove={() => setAssignedUser(null)}
+                    />
+                )}
+
+                <LabelSelector
+                    selectedLabelIds={selectedLabelIds}
+                    onChange={setSelectedLabelIds}
                 />
             </div>
 

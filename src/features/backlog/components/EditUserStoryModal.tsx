@@ -53,6 +53,8 @@ export default function EditUserStoryModal({
         epicId?: number;
         projectId: number;
         priority: number;
+        assignedTo?: string;
+        labelIds?: number[];
     }) => {
         const dto: UpdateUserStoryRequestDto = {
             title: data.title,
@@ -64,6 +66,8 @@ export default function EditUserStoryModal({
             epicId: data.epicId,
             projectId: data.projectId,
             priority: data.priority,
+            assignedTo: data.assignedTo,
+            labelIds: data.labelIds,
         };
 
         await update(story.id, dto);
@@ -104,6 +108,8 @@ export default function EditUserStoryModal({
                                 acceptanceCriteria: story.acceptanceCriteria,
                                 sprintId: story.sprintId,
                                 epicId: story.epicId,
+                                assignedTo: story.assignedTo,
+                                labelIds: story.labels?.map(l => l.id),
                             }}
                             projectId={story.projectId}
                             sprints={sprints}

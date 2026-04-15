@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, CheckSquare, Settings, List, Tag, ChevronDown, Folder, Users } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Settings, List, Tag, ChevronDown, Users } from 'lucide-react';
 import UserInfo from '@/features/auth/components/UserInfo';
 import ProjectSelector from '@/features/projects/components/ProjectSelector';
 
@@ -23,7 +23,6 @@ export default function Navbar() {
     const [isAdminOpen, setIsAdminOpen] = useState(false);
 
     const isAdminActive = pathname.startsWith('/admin') || pathname.startsWith('/projects');
-    const isBacklogActive = pathname.startsWith('/backlog');
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

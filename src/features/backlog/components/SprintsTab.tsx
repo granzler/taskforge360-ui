@@ -28,6 +28,7 @@ interface SprintsTabProps {
     epics: EpicItem[];
     onSprintDeleted: (sprintId: number) => void;
     onStoryCreated: (storyId: number) => void;
+    onStoryUpdated?: (story: UserStoryDto) => void;
 }
 
 export default function SprintsTab({ 
@@ -38,7 +39,8 @@ export default function SprintsTab({
     subtasks, 
     epics, 
     onSprintDeleted,
-    onStoryCreated 
+    onStoryCreated,
+    onStoryUpdated,
 }: SprintsTabProps) {
     const [expandedSprints, setExpandedSprints] = useState<number[]>([1, 2]);
     const [expandedStories, setExpandedStories] = useState<number[]>([]);
@@ -311,7 +313,7 @@ export default function SprintsTab({
                     isOpen={!!editingStory}
                     onClose={() => setEditingStory(null)}
                     onUpdated={(story) => {
-                        onStoryCreated(story.id);
+                        onStoryUpdated?.(story);
                     }}
                     sprints={sprints}
                     epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}

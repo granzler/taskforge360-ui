@@ -151,6 +151,12 @@ export default function BacklogPage() {
         } catch (err) {
             console.error('Failed to refresh story:', err);
         }
+        setShowCreateStoryModal(false);
+    };
+
+    const handleStoryUpdated = async (updatedStory: UserStoryDto) => {
+        setUserStories(prev => prev.map(s => s.id === updatedStory.id ? updatedStory : s));
+        toast.success('User story updated!');
     };
 
     const handleEpicCreated = (epic: EpicResponseDto) => {
@@ -167,6 +173,42 @@ export default function BacklogPage() {
 
     const handleEditEpic = (epic: EpicResponseDto) => {
         setEditingEpic(epic);
+    };
+
+    const handleLinkStory = async (epicId: number, storyId: number): Promise<boolean> => {
+        try {
+            const currentStory = userStories.find(s => s.id === storyId);
+            if (!currentStory) {
+                toast.error('Story not found');
+                return false;
+            }
+
+            const result = await userStoryService.update(storyId, {
+                title: currentStory.title,
+                description: currentStory.description,
+                statusId: currentStory.statusId,
+                priority: currentStory.priority,
+                projectId: currentStory.projectId,
+                storyPoints: currentStory.storyPoints,
+                acceptanceCriteria: currentStory.acceptanceCriteria,
+                sprintId: currentStory.sprintId,
+                epicId: epicId,
+                assignedTo: currentStory.assignedTo,
+                labelIds: currentStory.labels?.map(l => l.id),
+            });
+            
+            if (result.success) {
+                setUserStories(prev => prev.map(s => s.id === storyId ? result.data : s));
+                toast.success('Story linked to epic!');
+                return true;
+            }
+            toast.error('Failed to link story');
+            return false;
+        } catch (err) {
+            console.error('Failed to link story:', err);
+            toast.error('Failed to link story');
+            return false;
+        }
     };
 
     const renderSprintsContent = () => {
@@ -203,6 +245,7 @@ export default function BacklogPage() {
                 epics={epics}
                 onSprintDeleted={handleSprintDeleted}
                 onStoryCreated={handleStoryCreated}
+                onStoryUpdated={handleStoryUpdated}
             />
         );
     };
@@ -282,6 +325,7 @@ export default function BacklogPage() {
                                     userStories={userStories}
                                     onCreateEpic={() => setShowCreateEpicModal(true)}
                                     onEditEpic={handleEditEpic}
+                                    onLinkStory={handleLinkStory}
                                 />
                             </>
                         )
