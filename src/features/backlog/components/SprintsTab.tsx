@@ -2,29 +2,46 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2 } from 'lucide-react';
-import { UserStory, SubTask, Epic } from '@/domain/entities/Project';
+import { SubTask, Epic } from '@/domain/entities/Project';
+import { UserStoryDto } from '@/domain/entities/UserStory';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { Sprint } from '@/domain/entities/Sprint';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { toast } from 'react-hot-toast';
 import UserStoryItem from './UserStoryItem';
+import CreateUserStoryModal from './CreateUserStoryModal';
+import EditUserStoryModal from './EditUserStoryModal';
 
 type EpicItem = Epic | EpicResponseDto;
 
 interface SprintWithStories extends Sprint {
-    stories: UserStory[];
+    stories: UserStoryDto[];
     totalStoryPoints: number;
 }
 
 interface SprintsTabProps {
+    projectId: number;
+    projectName: string;
     sprints: Sprint[];
-    userStories: UserStory[];
+    userStories: UserStoryDto[];
     subtasks: SubTask[];
     epics: EpicItem[];
     onSprintDeleted: (sprintId: number) => void;
+    onStoryCreated: (storyId: number) => void;
+    onStoryUpdated?: (story: UserStoryDto) => void;
 }
 
-export default function SprintsTab({ sprints, userStories, subtasks, epics, onSprintDeleted }: SprintsTabProps) {
+export default function SprintsTab({ 
+    projectId, 
+    projectName, 
+    sprints, 
+    userStories, 
+    subtasks, 
+    epics, 
+    onSprintDeleted,
+    onStoryCreated,
+    onStoryUpdated,
+}: SprintsTabProps) {
     const [expandedSprints, setExpandedSprints] = useState<number[]>([1, 2]);
     const [expandedStories, setExpandedStories] = useState<number[]>([]);
     
@@ -32,6 +49,11 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
     const [menuOpenSprintId, setMenuOpenSprintId] = useState<number | null>(null);
     const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Modal states
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createModalSprintId, setCreateModalSprintId] = useState<number | undefined>(undefined);
+    const [editingStory, setEditingStory] = useState<UserStoryDto | null>(null);
 
     const toggleSprint = (id: number) => {
         setExpandedSprints(prev =>
@@ -162,12 +184,13 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
                     {expandedSprints.includes(sprint.id) && (
                         <div className="p-4 border-t border-border bg-background/20 rounded-b-xl">
                             {sprint.stories.length > 0 ? (
-                                sprint.stories.map(story => (
+                                sprint.stories.map((story, idx) => (
                                     <UserStoryItem
-                                        key={story.id}
+                                        key={`${story.id}-${idx}`}
                                         story={story}
                                         isExpanded={expandedStories.includes(story.id)}
                                         onToggle={toggleStory}
+                                        onEdit={(story) => setEditingStory(story)}
                                         subtasks={subtasks.filter(st => st.userStoryId === story.id)}
                                         epic={epics.find(e => e.id === story.epicId)}
                                     />
@@ -177,7 +200,13 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
                                     No stories in this sprint. Drag here to add.
                                 </div>
                             )}
-                            <button className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-xs font-medium text-slate-500 hover:bg-accent/5 hover:text-primary transition-all">
+                            <button 
+                                className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-xs font-medium text-slate-500 hover:bg-accent/5 hover:text-primary transition-all"
+                                onClick={() => {
+                                    setCreateModalSprintId(sprint.id);
+                                    setShowCreateModal(true);
+                                }}
+                            >
                                 <Plus size={14} /> Add User Story
                             </button>
                         </div>
@@ -204,12 +233,13 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
 
             <div className="p-4 rounded-xl border border-border bg-background shadow-sm">
                 {unassignedStories.length > 0 ? (
-                    unassignedStories.map(story => (
+                    unassignedStories.map((story, idx) => (
                         <UserStoryItem
-                            key={story.id}
+                            key={`unassigned-${story.id}-${idx}`}
                             story={story}
                             isExpanded={expandedStories.includes(story.id)}
                             onToggle={toggleStory}
+                            onEdit={(story) => setEditingStory(story)}
                             subtasks={subtasks.filter(st => st.userStoryId === story.id)}
                             epic={epics.find(e => e.id === story.epicId)}
                         />
@@ -256,6 +286,38 @@ export default function SprintsTab({ sprints, userStories, subtasks, epics, onSp
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Create User Story Modal */}
+            {showCreateModal && (
+                <CreateUserStoryModal
+                    projectId={projectId}
+                    projectName={projectName}
+                    sprints={sprints}
+                    epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
+                    sprintId={createModalSprintId}
+                    onClose={() => setShowCreateModal(false)}
+                    onCreated={(storyId) => {
+                        setShowCreateModal(false);
+                        if (storyId) {
+                            onStoryCreated(storyId);
+                        }
+                    }}
+                />
+            )}
+
+            {/* Edit User Story Modal */}
+            {editingStory && (
+                <EditUserStoryModal
+                    story={editingStory}
+                    isOpen={!!editingStory}
+                    onClose={() => setEditingStory(null)}
+                    onUpdated={(story) => {
+                        onStoryUpdated?.(story);
+                    }}
+                    sprints={sprints}
+                    epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
+                />
             )}
         </div>
     );

@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import {
-    mockUserStories,
     mockSubTasks
 } from '@/features/backlog/data/mockBacklogData';
 import { Sprint } from '@/domain/entities/Sprint';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { epicService } from '@/infrastructure/services/epicService';
+import { userStoryService } from '@/infrastructure/services/userStoryService';
+import { UserStoryDto } from '@/domain/entities/UserStory';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { Layers, Calendar, Plus, FolderOpen, Loader2 } from 'lucide-react';
 import SprintsTab from '@/features/backlog/components/SprintsTab';
 import EpicsTab from '@/features/backlog/components/EpicsTab';
 import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
+import CreateUserStoryModal from '@/features/backlog/components/CreateUserStoryModal';
 import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
 
@@ -22,6 +24,7 @@ export default function BacklogPage() {
     const { selectedProject } = useProject();
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreateEpicModal, setShowCreateEpicModal] = useState(false);
+    const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
     const [editingEpic, setEditingEpic] = useState<EpicResponseDto | null>(null);
 
     const [sprints, setSprints] = useState<Sprint[]>([]);
@@ -29,6 +32,9 @@ export default function BacklogPage() {
 
     const [epics, setEpics] = useState<EpicResponseDto[]>([]);
     const [isLoadingEpics, setIsLoadingEpics] = useState(false);
+
+    const [userStories, setUserStories] = useState<UserStoryDto[]>([]);
+    const [isLoadingStories, setIsLoadingStories] = useState(false);
 
     const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -50,9 +56,11 @@ export default function BacklogPage() {
         const fetchAll = async () => {
             setIsLoadingSprints(true);
             setIsLoadingEpics(true);
+            setIsLoadingStories(true);
 
             let sprintsResult: typeof sprints = [];
             let epicsResult: typeof epics = [];
+            let allStories: UserStoryDto[] = [];
             let hasError = false;
 
             try {
@@ -60,11 +68,12 @@ export default function BacklogPage() {
                 if (result.success) {
                     sprintsResult = result.data;
                 } else {
-                    console.error('Failed to fetch sprints:', result.errors);
+                    toast.error(result.errors?.map(e => e.message).join(', ') || 'Failed to fetch sprints.');
                     hasError = true;
                 }
             } catch (err) {
                 console.error('Failed to fetch sprints:', err);
+                toast.error('Failed to fetch sprints. Please try again.');
                 hasError = true;
             } finally {
                 setIsLoadingSprints(false);
@@ -75,18 +84,43 @@ export default function BacklogPage() {
                 if (result.success) {
                     epicsResult = result.data;
                 } else {
-                    console.error('Failed to fetch epics:', result.errors);
+                    toast.error(result.errors?.map(e => e.message).join(', ') || 'Failed to fetch epics.');
                     hasError = true;
                 }
             } catch (err) {
                 console.error('Failed to fetch epics:', err);
+                toast.error('Failed to fetch epics. Please try again.');
                 hasError = true;
             } finally {
                 setIsLoadingEpics(false);
             }
+            
+            try {
+                const backlogResult = await userStoryService.getBacklog(selectedProject.id);
+                if (backlogResult.success) {
+                    allStories = [...backlogResult.data];
+                } else {
+                    toast.error(backlogResult.errors?.map(e => e.message).join(', ') || 'Failed to fetch backlog stories.');
+                    hasError = true;
+                }
+                
+                // Fetch stories for all sprints
+                for (const sprint of sprintsResult) {
+                    const sprintStoriesResult = await userStoryService.getBySprint(sprint.id);
+                    if (sprintStoriesResult.success) {
+                        allStories = [...allStories, ...sprintStoriesResult.data];
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch user stories:', err);
+                hasError = true;
+            } finally {
+                setIsLoadingStories(false);
+            }
 
             setSprints(sprintsResult);
             setEpics(epicsResult);
+            setUserStories(allStories);
 
             if (hasError) {
                 setLoadError('Some data could not be loaded. Please refresh to try again.');
@@ -106,6 +140,25 @@ export default function BacklogPage() {
         setSprints(prev => prev.filter(s => s.id !== sprintId));
     };
 
+    const handleStoryCreated = async (storyId?: number) => {
+        if (!storyId) return;
+        try {
+            const result = await userStoryService.getById(storyId);
+            if (result.success && result.data) {
+                setUserStories(prev => [...prev, result.data]);
+                toast.success('User story created!');
+            }
+        } catch (err) {
+            console.error('Failed to refresh story:', err);
+        }
+        setShowCreateStoryModal(false);
+    };
+
+    const handleStoryUpdated = async (updatedStory: UserStoryDto) => {
+        setUserStories(prev => prev.map(s => s.id === updatedStory.id ? updatedStory : s));
+        toast.success('User story updated!');
+    };
+
     const handleEpicCreated = (epic: EpicResponseDto) => {
         setEpics(prev => [...prev, epic]);
         setShowCreateEpicModal(false);
@@ -120,6 +173,42 @@ export default function BacklogPage() {
 
     const handleEditEpic = (epic: EpicResponseDto) => {
         setEditingEpic(epic);
+    };
+
+    const handleLinkStory = async (epicId: number, storyId: number): Promise<boolean> => {
+        try {
+            const currentStory = userStories.find(s => s.id === storyId);
+            if (!currentStory) {
+                toast.error('Story not found');
+                return false;
+            }
+
+            const result = await userStoryService.update(storyId, {
+                title: currentStory.title,
+                description: currentStory.description,
+                statusId: currentStory.statusId,
+                priority: currentStory.priority,
+                projectId: currentStory.projectId,
+                storyPoints: currentStory.storyPoints,
+                acceptanceCriteria: currentStory.acceptanceCriteria,
+                sprintId: currentStory.sprintId,
+                epicId: epicId,
+                assignedTo: currentStory.assignedTo,
+                labelIds: currentStory.labels?.map(l => l.id),
+            });
+            
+            if (result.success) {
+                setUserStories(prev => prev.map(s => s.id === storyId ? result.data : s));
+                toast.success('Story linked to epic!');
+                return true;
+            }
+            toast.error('Failed to link story');
+            return false;
+        } catch (err) {
+            console.error('Failed to link story:', err);
+            toast.error('Failed to link story');
+            return false;
+        }
     };
 
     const renderSprintsContent = () => {
@@ -137,7 +226,7 @@ export default function BacklogPage() {
             );
         }
 
-        if (isLoadingSprints || isLoadingEpics) {
+        if (isLoadingSprints || isLoadingEpics || isLoadingStories) {
             return (
                 <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
                     <Loader2 size={20} className="animate-spin" />
@@ -148,11 +237,15 @@ export default function BacklogPage() {
 
         return (
             <SprintsTab
+                projectId={selectedProject.id}
+                projectName={selectedProject.name}
                 sprints={sprints}
-                userStories={mockUserStories}
+                userStories={userStories}
                 subtasks={mockSubTasks}
                 epics={epics}
                 onSprintDeleted={handleSprintDeleted}
+                onStoryCreated={handleStoryCreated}
+                onStoryUpdated={handleStoryUpdated}
             />
         );
     };
@@ -181,7 +274,11 @@ export default function BacklogPage() {
                             <Calendar size={16} />
                             Plan Sprint
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95">
+                        <button
+                            onClick={() => setShowCreateStoryModal(true)}
+                            disabled={!selectedProject}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
                             <Plus size={18} />
                             Create Story
                         </button>
@@ -225,8 +322,10 @@ export default function BacklogPage() {
                                 {loadError && <div className="mb-4 p-3 text-sm text-red-500 bg-red-100 dark:bg-red-500/20 rounded-lg">{loadError}</div>}
                                 <EpicsTab
                                     epics={epics}
+                                    userStories={userStories}
                                     onCreateEpic={() => setShowCreateEpicModal(true)}
                                     onEditEpic={handleEditEpic}
+                                    onLinkStory={handleLinkStory}
                                 />
                             </>
                         )
@@ -290,6 +389,18 @@ export default function BacklogPage() {
                     onClose={() => setEditingEpic(null)}
                     onCreated={() => {}}
                     onUpdated={handleEpicUpdated}
+                />
+            )}
+
+            {/* Create User Story Modal */}
+            {showCreateStoryModal && selectedProject && (
+                <CreateUserStoryModal
+                    projectId={selectedProject.id}
+                    projectName={selectedProject.name}
+                    sprints={sprints}
+                    epics={epics}
+                    onClose={() => setShowCreateStoryModal(false)}
+                    onCreated={handleStoryCreated}
                 />
             )}
         </>

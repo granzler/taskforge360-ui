@@ -46,6 +46,31 @@ export const EPIC_STATUS_OPTIONS = [
     { id: EpicStatus.Cancelled, label: 'Cancelled' },
 ];
 
+export enum UserStoryStatus {
+    Backlog = 6,
+    ToDo = 7,
+    InProgress = 8,
+    ReadyForReview = 9,
+    InReview = 10,
+    NeedsRevision = 11,
+    ReadyForTest = 12,
+    InTest = 13,
+    Done = 14,
+    Blocked = 15
+}
+
+export const USER_STORY_STATUS_LABELS: Record<UserStoryStatus, string> = {
+    [UserStoryStatus.Backlog]: 'Backlog',
+    [UserStoryStatus.ToDo]: 'To Do',
+    [UserStoryStatus.InProgress]: 'In Progress',
+    [UserStoryStatus.ReadyForReview]: 'Ready for Review',
+    [UserStoryStatus.InReview]: 'In Review',
+    [UserStoryStatus.NeedsRevision]: 'Needs Revision',
+    [UserStoryStatus.ReadyForTest]: 'Ready for Test',
+    [UserStoryStatus.InTest]: 'In Test',
+    [UserStoryStatus.Done]: 'Done',
+    [UserStoryStatus.Blocked]: 'Blocked',
+};
 export interface ApiError {
   code: string;
   message: string;

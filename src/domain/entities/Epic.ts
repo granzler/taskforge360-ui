@@ -28,7 +28,6 @@ export interface EpicResponseDto {
     projectId: number;
     userStories: UserStoryDto[];
     priority?: number | string;
-    updatedAt?: string;
 }
 
 export interface CreateEpicDto {

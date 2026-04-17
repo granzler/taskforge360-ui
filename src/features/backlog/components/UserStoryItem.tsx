@@ -1,19 +1,23 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Target, User, Plus } from 'lucide-react';
-import { Epic, UserStory, SubTask } from '@/domain/entities/Project';
+import { ChevronDown, ChevronRight, Target, User, Plus, Pencil } from 'lucide-react';
+import { Epic, SubTask } from '@/domain/entities/Project';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import { getPriorityColor, getStatusIcon } from '@/lib/utils/colors';
+import { UserStoryDto } from '@/domain/entities/UserStory';
+import { getEpicPriorityColor, getStatusIcon, getPriorityColor } from '@/lib/utils/colors';
+import { USER_STORY_STATUS_LABELS, UserStoryStatus, Status } from '@/domain/types';
+import { LabelBadge } from '@/features/labels/components/LabelBadge';
 
 interface UserStoryItemProps {
-    story: UserStory;
+    story: UserStoryDto;
     isExpanded: boolean;
     onToggle: (id: number) => void;
+    onEdit?: (story: UserStoryDto) => void;
     subtasks: SubTask[];
     epic?: Epic | EpicResponseDto;
 }
 
-export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, epic }: UserStoryItemProps) {
+export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, subtasks, epic }: UserStoryItemProps) {
     return (
         <div className="mb-2 group">
             <div
@@ -24,25 +28,37 @@ export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, e
                     <div className="text-slate-400 group-hover:text-primary transition-colors">
                         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </div>
-                    {getStatusIcon(story.status)}
-                    <span className="font-medium text-sm">{story.title}</span>
+                    {getStatusIcon(USER_STORY_STATUS_LABELS[story.statusId as UserStoryStatus] as Status || 'To Do')}
+                    <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                        <span className="font-medium text-sm truncate">{story.title}</span>
+                        {story.labels && story.labels.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {story.labels.slice(0, 3).map(label => (
+                                    <LabelBadge key={label.id} tagName={label.tagName} className="text-[9px]" />
+                                ))}
+                                {story.labels.length > 3 && (
+                                    <span className="text-[9px] text-slate-400">+{story.labels.length - 3}</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     {epic && (
-                        <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                        <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 shrink-0">
                             {epic.title}
                         </span>
                     )}
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getPriorityColor(story.priority)}`}>
-                        {story.priority}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getEpicPriorityColor(story.priority)}`}>
+                        {story.priority === 1 ? 'Low' : story.priority === 2 ? 'Medium' : story.priority === 3 ? 'High' : 'Critical'}
                     </span>
                     <div className="flex items-center gap-1 text-slate-400 text-xs">
                         <Target size={12} />
                         <span>{story.storyPoints} pts</span>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold border border-border">
-                        {story.assigneeId ? 'JD' : <User size={14} className="text-slate-400" />}
+                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold border border-border" title={story.assignedTo || 'Unassigned'}>
+                        {story.assignedTo ? story.assignedTo.charAt(0).toUpperCase() : <User size={14} className="text-slate-400" />}
                     </div>
                 </div>
             </div>
@@ -67,6 +83,17 @@ export default function UserStoryItem({ story, isExpanded, onToggle, subtasks, e
                     <button className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1">
                         <Plus size={10} /> Add Subtask
                     </button>
+                    {isExpanded && onEdit && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(story);
+                            }}
+                            className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1"
+                        >
+                            <Pencil size={10} /> Edit Story
+                        </button>
+                    )}
                 </div>
             )}
         </div>

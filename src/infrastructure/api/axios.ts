@@ -20,8 +20,10 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
+        console.error('API Error:', error.response?.status, error.response?.data);
         if (error.response) {
             const status = error.response.status;
+            const data = error.response.data;
             
             if (status === 401) {
                 console.warn('API returned 401 Unauthorized. Access token may be expired. Signing out...');
@@ -30,9 +32,19 @@ api.interceptors.response.use(
                     import('react-hot-toast').then(({ toast }) => toast.error('Session expired. Please log in again.'));
                     await signOut({ callbackUrl: '/login?session_expired=true' });
                 }
-            } else if ([400, 404, 409].includes(status) && error.response.data && error.response.data.errors) {
+            } else if ([400, 404, 409].includes(status) && data && data.errors) {
                 // The Result pattern returns a structured error response
-                throw new ApiException(error.response.data);
+                throw new ApiException(data);
+            } else {
+                // Handle other errors (500, etc.) with fallback
+                throw new ApiException({
+                    traceId: 'unknown',
+                    errors: [{
+                        code: 'HTTP_ERROR',
+                        message: `Server returned ${status}: ${data?.message || error.message}`,
+                        type: 'System'
+                    }]
+                });
             }
         }
         return Promise.reject(error);

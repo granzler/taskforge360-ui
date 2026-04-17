@@ -7,10 +7,10 @@ export const handleApiCall = async <T>(apiCall: () => Promise<T>): Promise<Resul
         return { success: true, data };
     } catch (error) {
         if (error instanceof ApiException) {
-            return {
-                success: false,
-                errors: error.response.errors,
-                traceId: error.response.traceId
+            return { 
+                success: false, 
+                errors: error.response.errors, 
+                traceId: error.response.traceId 
             };
         }
         

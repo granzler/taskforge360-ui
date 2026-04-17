@@ -50,28 +50,10 @@ export interface Epic {
     priority: Priority;
     status: Status;
     projectId: number;
-    createdAt: string;
-    updatedAt: string;
-    createdBy: string;
     assigneeId?: string;
 }
 
-export interface UserStory {
-    id: number;
-    title: string;
-    description: string;
-    priority: Priority;
-    status: Status;
-    epicId?: number;
-    createdAt: string;
-    updatedAt: string;
-    createdBy: string;
-    assigneeId?: string;
-    sprintId?: number;
-    storyPoints: number;
-    labelId?: number;
-    acceptanceCriteria: string;
-}
+
 
 export interface SubTask {
     id: number;
@@ -82,8 +64,5 @@ export interface SubTask {
     startDate?: string;
     endDate?: string;
     userStoryId: number;
-    createdAt: string;
-    updatedAt: string;
-    createdBy: string;
     assigneeId?: string;
 }
