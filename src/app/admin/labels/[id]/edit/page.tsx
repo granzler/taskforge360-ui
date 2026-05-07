@@ -18,10 +18,7 @@ export default function EditLabelPage({ params }: PageProps) {
     const router = useRouter();
 
     const [label, setLabel] = useState<GlobalLabelDto | null>(null);
-    const [formData, setFormData] = useState<UpdateLabelRequestDto>({
-        tagName: '',
-        description: '',
-    });
+    const [formData, setFormData] = useState<UpdateLabelRequestDto | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -41,6 +38,7 @@ export default function EditLabelPage({ params }: PageProps) {
                     setFormData({
                         tagName: result.data.tagName,
                         description: result.data.description,
+                        concurrencyVersion: result.data.concurrencyVersion,
                     });
                 } else {
                     setError('Label not found or no longer exists.');
@@ -59,7 +57,7 @@ export default function EditLabelPage({ params }: PageProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.tagName.trim()) {
+        if (!formData || !formData.tagName.trim()) {
             toast.error('Tag name is required.');
             return;
         }
@@ -69,6 +67,7 @@ export default function EditLabelPage({ params }: PageProps) {
             const result = await globalLabelService.update(labelId, {
                 tagName: formData.tagName.trim(),
                 description: formData.description.trim(),
+                concurrencyVersion: formData.concurrencyVersion,
             });
 
             if (result.success) {
@@ -113,7 +112,7 @@ export default function EditLabelPage({ params }: PageProps) {
         );
     }
 
-    if (error || !label) {
+    if (error || !label || !formData) {
         return (
             <div className="container mx-auto px-4 py-8">
                 <Link
@@ -125,9 +124,15 @@ export default function EditLabelPage({ params }: PageProps) {
                     </div>
                     Back to Labels
                 </Link>
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
-                    {error || 'Label not found.'}
-                </div>
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 size={32} className="animate-spin text-slate-400" />
+                    </div>
+                ) : (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
+                        {error || 'Label not found.'}
+                    </div>
+                )}
             </div>
         );
     }
@@ -170,7 +175,7 @@ export default function EditLabelPage({ params }: PageProps) {
                         type="text"
                         required
                         value={formData.tagName}
-                        onChange={(e) => setFormData({ ...formData, tagName: e.target.value })}
+                        onChange={(e) => formData && setFormData({ ...formData, tagName: e.target.value })}
                         className="w-full bg-accent/30 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm px-4 py-3 font-bold text-lg"
                         placeholder="e.g., Bug, Feature, Improvement..."
                     />
@@ -184,7 +189,7 @@ export default function EditLabelPage({ params }: PageProps) {
                         id="description"
                         rows={4}
                         value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        onChange={(e) => formData && setFormData({ ...formData, description: e.target.value })}
                         className="w-full bg-accent/30 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm px-4 py-3 resize-y leading-relaxed"
                         placeholder="Describe when this label should be used..."
                     />

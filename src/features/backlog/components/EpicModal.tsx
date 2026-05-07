@@ -67,6 +67,7 @@ export default function EpicModal({ mode, epic, projectId, projectName, onClose,
                     priority,
                     statusId,
                     projectId: epic.projectId,
+                    concurrencyVersion: epic.concurrencyVersion,
                 };
 
                 const result = await epicService.update(epic.id, dto);
@@ -95,8 +96,9 @@ export default function EpicModal({ mode, epic, projectId, projectName, onClose,
                 }
             }
         } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.';
             console.error('Epic operation failed (exception):', err);
-            toast.error('An unexpected error occurred. Please try again.');
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }

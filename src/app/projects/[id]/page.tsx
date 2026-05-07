@@ -26,11 +26,12 @@ export default function ProjectDetailsPage({ params }: PageProps) {
 
     // Edit State
     const [isEditing, setIsEditing] = useState(false);
-    const [editForm, setEditForm] = useState({
-        name: '',
-        description: '',
-        sprintDurationDays: 14
-    });
+    const [editForm, setEditForm] = useState<{
+        name: string;
+        description: string;
+        sprintDurationDays: number;
+        concurrencyVersion: number;
+    } | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
@@ -48,7 +49,8 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                     setEditForm({
                         name: projectResult.data.name,
                         description: projectResult.data.description || '',
-                        sprintDurationDays: projectResult.data.sprintDurationDays
+                        sprintDurationDays: projectResult.data.sprintDurationDays,
+                        concurrencyVersion: projectResult.data.concurrencyVersion,
                     });
                 } else {
                     setError('Project not found or no longer exists.');
@@ -69,12 +71,15 @@ export default function ProjectDetailsPage({ params }: PageProps) {
     }, [projectId]);
 
     const handleSave = async () => {
-        if (!project) return;
+        if (!project || !editForm) return;
         setIsSaving(true);
         try {
             const updateResult = await projectService.update(project.id, {
                 id: project.id,
-                ...editForm
+                name: editForm.name,
+                description: editForm.description,
+                sprintDurationDays: editForm.sprintDurationDays,
+                concurrencyVersion: editForm.concurrencyVersion,
             });
 
             if (updateResult.success) {
@@ -115,8 +120,9 @@ export default function ProjectDetailsPage({ params }: PageProps) {
     };
 
     const handleAssignUser = async (user: UserSearchResult) => {
+        if (!project) return;
         try {
-            const result = await projectService.assignUser(projectId, user.id);
+            const result = await projectService.assignUser(projectId, user.id, project.concurrencyVersion);
             if (result.success) {
                 if (!users.some(u => u.id === user.id)) {
                     setUsers([...users, user]);
@@ -177,14 +183,14 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex-1 max-w-2xl">
-                        {isEditing ? (
+                        {isEditing && editForm ? (
                             <div className="space-y-4 animate-in fade-in slide-in-from-left-2 duration-300">
                                 <div>
                                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Project Name</label>
                                     <input
                                         type="text"
                                         value={editForm.name}
-                                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                                        onChange={e => editForm && setEditForm({ ...editForm, name: e.target.value })}
                                         className="w-full px-4 py-3 bg-accent/30 border border-border/50 rounded-xl font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm"
                                         placeholder="Enter project name..."
                                     />
@@ -198,7 +204,7 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                                             <input
                                                 type="number"
                                                 value={editForm.sprintDurationDays}
-                                                onChange={e => setEditForm({ ...editForm, sprintDurationDays: parseInt(e.target.value) || 0 })}
+                                                onChange={e => editForm && setEditForm({ ...editForm, sprintDurationDays: parseInt(e.target.value) || 0 })}
                                                 className="w-full pl-4 pr-12 py-2.5 bg-accent/30 border border-border/50 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm"
                                                 min="1"
                                             />
@@ -226,11 +232,16 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                 </div>
 
                 <div className="flex items-center gap-3 pt-2">
-                    {isEditing ? (
+                    {isEditing && editForm ? (
                         <>
                             <button
                                 onClick={() => {
-                                    setEditForm({ name: project.name, description: project.description || '', sprintDurationDays: project.sprintDurationDays });
+                                    setEditForm({ 
+                                        name: project.name, 
+                                        description: project.description || '', 
+                                        sprintDurationDays: project.sprintDurationDays,
+                                        concurrencyVersion: project.concurrencyVersion,
+                                    });
                                     setIsEditing(false);
                                 }}
                                 className="px-5 py-2.5 text-sm font-bold text-slate-500 bg-background border border-border rounded-xl hover:bg-accent/50 hover:text-slate-700 dark:hover:text-slate-200 transition-all shadow-sm"
@@ -268,13 +279,13 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                             Overview
                         </h2>
 
-                        {isEditing ? (
+                        {isEditing && editForm ? (
                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Project Description</label>
                                 <textarea
                                     rows={8}
                                     value={editForm.description}
-                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                    onChange={(e) => editForm && setEditForm({ ...editForm, description: e.target.value })}
                                     className="w-full px-4 py-3 bg-accent/30 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm resize-y leading-relaxed"
                                     placeholder="Write a comprehensive description of the project goals, tech stack, and objectives..."
                                 />

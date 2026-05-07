@@ -3,6 +3,7 @@ export interface SubTaskDto {
     title: string;
     description: string;
     userStoryId: number;
+    concurrencyVersion: number;
 }
 
 export interface UserStoryDto {
@@ -28,6 +29,7 @@ export interface EpicResponseDto {
     projectId: number;
     userStories: UserStoryDto[];
     priority?: number | string;
+    concurrencyVersion: number;
 }
 
 export interface CreateEpicDto {
@@ -47,4 +49,5 @@ export interface UpdateEpicDto {
     priority: number;
     statusId: number;
     projectId: number;
+    concurrencyVersion: number;
 }

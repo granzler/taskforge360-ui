@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Project } from '@/domain/entities/Project';
 import { projectService } from '@/infrastructure/services/projectService';
+import { useProject } from '@/features/projects/context/ProjectContext';
 import { Plus, Edit, Loader2, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -12,6 +13,7 @@ export default function ProjectsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
+    const { refreshProjects } = useProject();
 
     useEffect(() => {
         fetchProjects();
@@ -51,6 +53,7 @@ export default function ProjectsPage() {
             
             // Refresh list
             fetchProjects();
+            await refreshProjects();
             setSelectedProjects([]);
         } catch (err) {
             console.error('Failed to delete projects (exception):', err);

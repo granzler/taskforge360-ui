@@ -35,6 +35,7 @@ describe('useUpdateUserStory', () => {
       statusName: 'To Do',
       priority: 2,
       projectId: 1,
+      concurrencyVersion: 1,
     };
 
     mockUserStoryService.update.mockResolvedValue({
@@ -59,6 +60,7 @@ describe('useUpdateUserStory', () => {
       statusId: 2,
       priority: 2,
       projectId: 1,
+      concurrencyVersion: 1,
     });
     expect(mockToast.success).toHaveBeenCalledWith('User story "Updated Story" updated!');
   });
@@ -140,6 +142,7 @@ describe('useUpdateUserStory', () => {
       statusName: 'In Progress',
       priority: 3,
       projectId: 1,
+      concurrencyVersion: 1,
     };
 
     mockUserStoryService.update.mockResolvedValue({
@@ -157,6 +160,7 @@ describe('useUpdateUserStory', () => {
         statusId: 3,
         priority: 3,
         projectId: 1,
+        concurrencyVersion: 1,
       } as UpdateUserStoryRequestDto);
     });
 

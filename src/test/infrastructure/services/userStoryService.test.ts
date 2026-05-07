@@ -35,6 +35,7 @@ describe('useCreateUserStory', () => {
       statusName: 'Backlog',
       priority: 2,
       projectId: 1,
+      concurrencyVersion: 1,
     };
 
     mockUserStoryService.create.mockResolvedValue({
@@ -126,7 +127,7 @@ describe('useCreateUserStory', () => {
     expect(result.current.isLoading).toBe(true);
 
     await act(async () => {
-      resolvePromise!({ success: true, data: { id: 1, title: 'Test', statusId: 1, priority: 2, projectId: 1 } });
+      resolvePromise!({ success: true, data: { id: 1, title: 'Test', statusId: 1, priority: 2, projectId: 1, concurrencyVersion: 1 } });
     });
 
     expect(result.current.isLoading).toBe(false);
@@ -140,6 +141,7 @@ describe('useCreateUserStory', () => {
       statusName: 'To Do',
       priority: 3,
       projectId: 1,
+      concurrencyVersion: 1,
     };
 
     mockUserStoryService.create.mockResolvedValue({

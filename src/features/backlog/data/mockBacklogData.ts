@@ -8,7 +8,8 @@ export const mockEpics: Epic[] = [
         priority: 'High',
         status: 'In Progress',
         projectId: 1,
-        assigneeId: '1'
+        assigneeId: '1',
+        concurrencyVersion: 1
     },
     {
         id: 2,
@@ -17,7 +18,8 @@ export const mockEpics: Epic[] = [
         priority: 'Critical',
         status: 'In Progress',
         projectId: 1,
-        assigneeId: '2'
+        assigneeId: '2',
+        concurrencyVersion: 1
     }
 ];
 
@@ -29,7 +31,8 @@ export const mockSubTasks: SubTask[] = [
         description: 'Design and implement the login form.',
         priority: 'High',
         status: 'In Progress',
-        userStoryId: 1
+        userStoryId: 1,
+        concurrencyVersion: 1
     },
     {
         id: 2,
@@ -37,6 +40,7 @@ export const mockSubTasks: SubTask[] = [
         description: 'Connect login form to backend API.',
         priority: 'High',
         status: 'To Do',
-        userStoryId: 1
+        userStoryId: 1,
+        concurrencyVersion: 1
     }
 ];

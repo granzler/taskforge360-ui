@@ -27,6 +27,7 @@ export interface UpdateUserStoryRequestDto {
     acceptanceCriteria?: string;
     assignedTo?: string;
     labelIds?: number[];
+    concurrencyVersion: number;
 }
 
 export interface UserStoryDto {
@@ -46,4 +47,5 @@ export interface UserStoryDto {
     subTasks?: SubTask[];
     assignedTo?: string;
     labels?: GlobalLabelDto[];
+    concurrencyVersion: number;
 }

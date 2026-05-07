@@ -54,9 +54,12 @@ export const projectService = {
         });
     },
 
-    assignUser: (projectId: number, userId: string): Promise<Result<void>> => {
+    assignUser: (projectId: number, userId: string, concurrencyVersion: number): Promise<Result<void>> => {
         return handleApiCall(async () => {
-            await api.post(`/api/Projects/${projectId}/users`, { userIds: [userId] });
+            await api.post(`/api/Projects/${projectId}/users`, { 
+                userIds: [userId],
+                concurrencyVersion 
+            });
         });
     },
 
