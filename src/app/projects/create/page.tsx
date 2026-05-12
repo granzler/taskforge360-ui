@@ -27,19 +27,15 @@ export default function CreateProjectPage() {
         }
 
         if (users && users.length > 0 && newProjectResult.data.id) {
-            let currentVersion = newProjectResult.data.concurrencyVersion + 1;
-            for (const user of users) {
-                const result = await projectService.assignUser(
-                    newProjectResult.data.id, 
-                    user.id, 
-                    currentVersion
-                );
-                if (!result.success) {
-                    const errorMessage = result.errors.map(e => e.message).join(', ');
-                    toast.error(`Failed to assign ${user.displayName || user.username}: ${errorMessage}`);
-                    throw new Error(errorMessage);
-                }
-                currentVersion += 1;
+            const result = await projectService.assignUsers(
+                newProjectResult.data.id, 
+                users.map(u => u.id), 
+                newProjectResult.data.concurrencyVersion
+            );
+            if (!result.success) {
+                const errorMessage = result.errors.map(e => e.message).join(', ');
+                toast.error(`Failed to assign users: ${errorMessage}`);
+                throw new Error(errorMessage);
             }
         }
 

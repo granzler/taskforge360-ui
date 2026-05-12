@@ -63,6 +63,15 @@ export const projectService = {
         });
     },
 
+    assignUsers: (projectId: number, userIds: string[], concurrencyVersion: number): Promise<Result<void>> => {
+        return handleApiCall(async () => {
+            await api.post(`/api/Projects/${projectId}/users`, { 
+                userIds,
+                concurrencyVersion 
+            });
+        });
+    },
+
     removeUser: (projectId: number, userId: string): Promise<Result<void>> => {
         return handleApiCall(async () => {
             await api.delete(`/api/Projects/${projectId}/users/${userId}`);

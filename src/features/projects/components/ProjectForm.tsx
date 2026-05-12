@@ -54,8 +54,6 @@ export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps)
             } else {
                 await onSubmit(formData, selectedUsers);
             }
-            router.push('/projects');
-            router.refresh();
         } catch (error) {
             console.error('Error submitting form:', error);
             alert('Failed to save project. Please check the console for details.');

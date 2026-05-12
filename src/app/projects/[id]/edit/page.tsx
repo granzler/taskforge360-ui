@@ -72,9 +72,8 @@ export default function EditProjectPage({ params }: PageProps) {
             const hasChanges = toAdd.length > 0 || toRemove.length > 0;
 
             if (hasChanges) {
-                // Handle additions sequentially to manage concurrency token
-                for (const user of toAdd) {
-                    await projectService.assignUser(projectId, user.id, project.concurrencyVersion);
+                if (toAdd.length > 0) {
+                    await projectService.assignUsers(projectId, toAdd.map(u => u.id), project.concurrencyVersion);
                 }
                 
                 // Handle removals
