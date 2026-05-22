@@ -15,9 +15,10 @@ interface UserStoryItemProps {
     onEdit?: (story: UserStoryDto) => void;
     subtasks: SubTask[];
     epic?: Epic | EpicResponseDto;
+    canUpdateStory?: boolean;
 }
 
-export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, subtasks, epic }: UserStoryItemProps) {
+export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, subtasks, epic, canUpdateStory = false }: UserStoryItemProps) {
     return (
         <div className="mb-2 group">
             <div
@@ -83,7 +84,7 @@ export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, sub
                     <button className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1">
                         <Plus size={10} /> Add Subtask
                     </button>
-                    {isExpanded && onEdit && (
+                    {isExpanded && onEdit && canUpdateStory && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();

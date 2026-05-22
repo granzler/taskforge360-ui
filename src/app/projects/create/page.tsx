@@ -6,6 +6,7 @@ import { projectService } from '@/infrastructure/services/projectService';
 import { CreateProjectDto } from '@/domain/entities/Project';
 import { UserSearchResult } from '@/domain/entities/User';
 import { useProject } from '@/features/projects/context/ProjectContext';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 import { ArrowLeft, FolderPlus } from 'lucide-react';
 import Link from 'next/link';
@@ -15,6 +16,18 @@ import { toast } from 'react-hot-toast';
 export default function CreateProjectPage() {
     const router = useRouter();
     const { refreshProjects } = useProject();
+    const { hasRole, hasScope } = usePermission();
+    const canCreate = hasRole('product-owner') || hasRole('system-admin') || hasScope('projects:create');
+
+    if (!canCreate) {
+        return (
+            <div className="container mx-auto px-4 py-8 max-w-4xl">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
+                    You do not have permission to create projects.
+                </div>
+            </div>
+        );
+    }
 
     const handleCreate = async (data: CreateProjectDto, users?: UserSearchResult[]) => {
         // Cast to CreateProjectDto because the form passes a union type but we know handled by service

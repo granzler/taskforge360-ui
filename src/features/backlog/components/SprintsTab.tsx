@@ -29,6 +29,9 @@ interface SprintsTabProps {
     onSprintDeleted: (sprintId: number) => void;
     onStoryCreated: (storyId: number) => void;
     onStoryUpdated?: (story: UserStoryDto) => void;
+    canDeleteSprint?: boolean;
+    canCreateStory?: boolean;
+    canUpdateStory?: boolean;
 }
 
 export default function SprintsTab({ 
@@ -41,6 +44,9 @@ export default function SprintsTab({
     onSprintDeleted,
     onStoryCreated,
     onStoryUpdated,
+    canDeleteSprint = false,
+    canCreateStory = false,
+    canUpdateStory = false,
 }: SprintsTabProps) {
     const [expandedSprints, setExpandedSprints] = useState<number[]>([1, 2]);
     const [expandedStories, setExpandedStories] = useState<number[]>([]);
@@ -164,16 +170,18 @@ export default function SprintsTab({
                                             }} 
                                         />
                                         <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-xl shadow-lg z-20 overflow-hidden text-sm py-1 animate-in fade-in zoom-in-95 duration-100">
-                                            <button
-                                                className="w-full text-left px-4 py-2 hover:bg-accent hover:text-red-500 transition-colors flex items-center gap-2 text-red-600 dark:text-red-400"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setMenuOpenSprintId(null);
-                                                    setSprintToDelete(sprint);
-                                                }}
-                                            >
-                                                <Trash2 size={14} /> Delete Sprint
-                                            </button>
+                                            {canDeleteSprint && (
+                                                <button
+                                                    className="w-full text-left px-4 py-2 hover:bg-accent hover:text-red-500 transition-colors flex items-center gap-2 text-red-600 dark:text-red-400"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setMenuOpenSprintId(null);
+                                                        setSprintToDelete(sprint);
+                                                    }}
+                                                >
+                                                    <Trash2 size={14} /> Delete Sprint
+                                                </button>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -193,6 +201,7 @@ export default function SprintsTab({
                                         onEdit={(story) => setEditingStory(story)}
                                         subtasks={subtasks.filter(st => st.userStoryId === story.id)}
                                         epic={epics.find(e => e.id === story.epicId)}
+                                        canUpdateStory={canUpdateStory}
                                     />
                                 ))
                             ) : (
@@ -200,15 +209,17 @@ export default function SprintsTab({
                                     No stories in this sprint. Drag here to add.
                                 </div>
                             )}
-                            <button 
-                                className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-xs font-medium text-slate-500 hover:bg-accent/5 hover:text-primary transition-all"
-                                onClick={() => {
-                                    setCreateModalSprintId(sprint.id);
-                                    setShowCreateModal(true);
-                                }}
-                            >
-                                <Plus size={14} /> Add User Story
-                            </button>
+                            {canCreateStory && (
+                                <button 
+                                    className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-xs font-medium text-slate-500 hover:bg-accent/5 hover:text-primary transition-all"
+                                    onClick={() => {
+                                        setCreateModalSprintId(sprint.id);
+                                        setShowCreateModal(true);
+                                    }}
+                                >
+                                    <Plus size={14} /> Add User Story
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
@@ -242,6 +253,7 @@ export default function SprintsTab({
                             onEdit={(story) => setEditingStory(story)}
                             subtasks={subtasks.filter(st => st.userStoryId === story.id)}
                             epic={epics.find(e => e.id === story.epicId)}
+                            canUpdateStory={canUpdateStory}
                         />
                     ))
                 ) : (

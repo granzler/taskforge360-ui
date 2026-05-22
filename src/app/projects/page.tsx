@@ -7,6 +7,7 @@ import { projectService } from '@/infrastructure/services/projectService';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { Plus, Edit, Loader2, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function ProjectsPage() {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -14,6 +15,11 @@ export default function ProjectsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
     const { refreshProjects } = useProject();
+    const { hasRole, hasScope } = usePermission();
+
+    const canCreate = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:create');
+    const canDelete = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:delete');
+    const canUpdate = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:update');
 
     useEffect(() => {
         fetchProjects();
@@ -103,7 +109,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {selectedProjects.length > 0 && (
+                    {selectedProjects.length > 0 && canDelete && (
                         <button
                             onClick={handleDelete}
                             className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg text-sm font-bold shadow-sm hover:bg-red-200 dark:hover:bg-red-900/50 transition-all"
@@ -111,13 +117,15 @@ export default function ProjectsPage() {
                             Delete {selectedProjects.length > 1 ? `(${selectedProjects.length})` : ''}
                         </button>
                     )}
-                    <Link
-                        href="/projects/create"
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95"
-                    >
-                        <Plus size={18} />
-                        Create Project
-                    </Link>
+                    {canCreate && (
+                        <Link
+                            href="/projects/create"
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95"
+                        >
+                            <Plus size={18} />
+                            Create Project
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -134,7 +142,7 @@ export default function ProjectsPage() {
                     />
                 </div>
 
-                {filteredProjects.length > 0 && (
+                {filteredProjects.length > 0 && canDelete && (
                     <label className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-accent/40 rounded-xl transition-colors select-none text-sm font-bold text-slate-500 mr-2 border border-transparent hover:border-border/50">
                         <input
                             type="checkbox"
@@ -155,13 +163,15 @@ export default function ProjectsPage() {
                     </div>
                     <h3 className="text-xl font-bold mb-2">No projects yet</h3>
                     <p className="text-slate-500 max-w-md mx-auto mb-8">Get started by creating your first project workspace to organize sprints, epics, and user stories.</p>
-                    <Link
-                        href="/projects/create"
-                        className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-md hover:bg-primary/90 transition-all hover:-translate-y-0.5"
-                    >
-                        <Plus size={20} />
-                        Create Your First Project
-                    </Link>
+                    {canCreate && (
+                        <Link
+                            href="/projects/create"
+                            className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold shadow-md hover:bg-primary/90 transition-all hover:-translate-y-0.5"
+                        >
+                            <Plus size={20} />
+                            Create Your First Project
+                        </Link>
+                    )}
                 </div>
             ) : filteredProjects.length === 0 ? (
                 <div className="text-center py-16 border border-border border-dashed rounded-3xl bg-card/30">
@@ -188,14 +198,16 @@ export default function ProjectsPage() {
                                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                                         <FolderOpen size={24} strokeWidth={2.5} />
                                     </div>
-                                    <div className="flex flex-col items-end gap-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedProjects.includes(project.id)}
-                                            onChange={() => toggleSelect(project.id)}
-                                            className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer shadow-sm transition-transform hover:scale-110"
-                                        />
-                                    </div>
+                                    {canDelete && (
+                                        <div className="flex flex-col items-end gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedProjects.includes(project.id)}
+                                                onChange={() => toggleSelect(project.id)}
+                                                className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer shadow-sm transition-transform hover:scale-110"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Link href={`/projects/${project.id}`} className="mb-2 block">
@@ -211,13 +223,15 @@ export default function ProjectsPage() {
                                         <Clock size={14} className="text-primary" />
                                         <span>{project.sprintDurationDays} Day Sprints</span>
                                     </div>
-                                    <Link
-                                        href={`/projects/${project.id}/edit`}
-                                        className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors"
-                                        title="Edit Project"
-                                    >
-                                        <Edit size={16} />
-                                    </Link>
+                                    {canUpdate && (
+                                        <Link
+                                            href={`/projects/${project.id}/edit`}
+                                            className="p-2 rounded-xl text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors"
+                                            title="Edit Project"
+                                        >
+                                            <Edit size={16} />
+                                        </Link>
+                                    )}
                                 </div>
                             </div>
                         </div>

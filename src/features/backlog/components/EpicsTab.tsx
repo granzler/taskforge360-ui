@@ -14,6 +14,9 @@ interface EpicsTabProps {
     onCreateEpic: () => void;
     onEditEpic: (epic: EpicResponseDto) => void;
     onLinkStory?: (epicId: number, storyId: number) => Promise<boolean>;
+    canCreateEpic?: boolean;
+    canUpdateEpic?: boolean;
+    canLinkStory?: boolean;
 }
 
 function EpicCard({ 
@@ -21,13 +24,17 @@ function EpicCard({
     stories, 
     onEditEpic, 
     onLinkStory,
-    unlinkedStories 
+    unlinkedStories,
+    canUpdateEpic = false,
+    canLinkStory = false,
 }: { 
     epic: EpicResponseDto; 
     stories: UserStoryDto[];
     onEditEpic: (epic: EpicResponseDto) => void;
     onLinkStory?: (epicId: number, storyId: number) => Promise<boolean>;
     unlinkedStories: UserStoryDto[];
+    canUpdateEpic?: boolean;
+    canLinkStory?: boolean;
 }) {
     const [showDropdown, setShowDropdown] = useState(false);
     const [linkingStoryId, setLinkingStoryId] = useState<number | null>(null);
@@ -72,13 +79,15 @@ function EpicCard({
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => onEditEpic(epic)}
-                            className="p-1 rounded-md text-slate-400 hover:bg-accent hover:text-foreground transition-colors"
-                            title="Edit Epic"
-                        >
-                            <Pencil size={14} />
-                        </button>
+                        {canUpdateEpic && (
+                            <button
+                                onClick={() => onEditEpic(epic)}
+                                className="p-1 rounded-md text-slate-400 hover:bg-accent hover:text-foreground transition-colors"
+                                title="Edit Epic"
+                            >
+                                <Pencil size={14} />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <h3 className="font-bold text-lg mb-2">{epic.title}</h3>
@@ -119,7 +128,7 @@ function EpicCard({
                     )}
                 </div>
                 <div className="mt-3 relative" ref={dropdownRef}>
-                    {onLinkStory && unlinkedStories.length > 0 ? (
+                    {canLinkStory && onLinkStory && unlinkedStories.length > 0 ? (
                         <>
                             <button 
                                 onClick={() => setShowDropdown(!showDropdown)}
@@ -159,7 +168,7 @@ function EpicCard({
     );
 }
 
-export default function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic, onLinkStory }: EpicsTabProps) {
+export default function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic, onLinkStory, canCreateEpic = false, canUpdateEpic = false, canLinkStory = false }: EpicsTabProps) {
     if (epics.length === 0) {
         return (
             <EmptyState
@@ -167,13 +176,15 @@ export default function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic,
                 title="No epics yet"
                 description="Create your first epic to organize your user stories into larger goals."
                 action={
-                    <button
-                        onClick={onCreateEpic}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all"
-                    >
-                        <Plus size={16} />
-                        Create Epic
-                    </button>
+                    canCreateEpic ? (
+                        <button
+                            onClick={onCreateEpic}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all"
+                        >
+                            <Plus size={16} />
+                            Create Epic
+                        </button>
+                    ) : undefined
                 }
             />
         );
@@ -206,19 +217,23 @@ export default function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic,
                     onEditEpic={onEditEpic}
                     onLinkStory={onLinkStory}
                     unlinkedStories={unlinkedStories}
+                    canUpdateEpic={canUpdateEpic}
+                    canLinkStory={canLinkStory}
                 />
             ))}
 
-            <button
-                onClick={onCreateEpic}
-                className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center p-8 text-slate-400 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group"
-            >
-                <div className="w-12 h-12 rounded-full border-2 border-dashed border-border flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-all">
-                    <Plus size={24} />
-                </div>
-                <span className="font-bold text-sm">Create New Epic</span>
-                <p className="text-[10px] mt-1">Define a high-level goal</p>
-            </button>
+            {canCreateEpic && (
+                <button
+                    onClick={onCreateEpic}
+                    className="rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center p-8 text-slate-400 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group"
+                >
+                    <div className="w-12 h-12 rounded-full border-2 border-dashed border-border flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-all">
+                        <Plus size={24} />
+                    </div>
+                    <span className="font-bold text-sm">Create New Epic</span>
+                    <p className="text-[10px] mt-1">Define a high-level goal</p>
+                </button>
+            )}
         </div>
     );
 }

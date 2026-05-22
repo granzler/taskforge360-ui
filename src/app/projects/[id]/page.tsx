@@ -9,6 +9,7 @@ import { ArrowLeft, Calendar, Edit, Loader2, Mail, Save, Trash2, FolderOpen, Use
 import UserAssigner from '@/features/auth/components/UserAssigner';
 import { toast } from 'react-hot-toast';
 import { useProject } from '@/features/projects/context/ProjectContext';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -19,6 +20,8 @@ export default function ProjectDetailsPage({ params }: PageProps) {
     const projectId = parseInt(id);
 
     const { refreshProjects } = useProject();
+    const { hasRole, hasScope } = usePermission();
+    const canUpdateProject = hasRole('product-owner') || hasRole('system-admin') || hasScope('projects:update');
     const [project, setProject] = useState<Project | null>(null);
     const [users, setUsers] = useState<UserSearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -258,7 +261,7 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                                 Save Changes
                             </button>
                         </>
-                    ) : (
+                    ) : canUpdateProject && (
                         <button
                             onClick={() => setIsEditing(true)}
                             className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold bg-background border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground transition-all shadow-sm"
@@ -299,12 +302,14 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                                 ) : (
                                     <div className="text-center py-10 px-4 border-2 border-dashed border-border/50 rounded-2xl bg-accent/10">
                                         <p className="text-slate-400 italic font-medium">No description provided for this project.</p>
-                                        <button
-                                            onClick={() => setIsEditing(true)}
-                                            className="mt-3 text-sm font-bold text-primary hover:underline flex items-center gap-1 mx-auto"
-                                        >
-                                            <Edit size={14} /> Add Description
-                                        </button>
+                                        {canUpdateProject && (
+                                            <button
+                                                onClick={() => setIsEditing(true)}
+                                                className="mt-3 text-sm font-bold text-primary hover:underline flex items-center gap-1 mx-auto"
+                                            >
+                                                <Edit size={14} /> Add Description
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -325,15 +330,17 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                             </span>
                         </div>
 
-                        <div className="mb-6 relative z-10">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Invite to Project</label>
-                            <UserAssigner
-                                assignedUsers={users}
-                                onAssign={handleAssignUser}
-                                onRemove={() => { }}
-                                hideAssignedList={true}
-                            />
-                        </div>
+                        {canUpdateProject && (
+                            <div className="mb-6 relative z-10">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Invite to Project</label>
+                                <UserAssigner
+                                    assignedUsers={users}
+                                    onAssign={handleAssignUser}
+                                    onRemove={() => { }}
+                                    hideAssignedList={true}
+                                />
+                            </div>
+                        )}
 
                         {users.length === 0 ? (
                             <div className="text-center py-8 border-2 border-dashed border-border/50 rounded-2xl bg-accent/10">
@@ -363,13 +370,15 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                                                 <span className="truncate">{user.email}</span>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleRemoveUser(user.id)}
-                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                            title="Remove User"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                                        {canUpdateProject && (
+                                            <button
+                                                onClick={() => handleRemoveUser(user.id)}
+                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                                title="Remove User"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
                                     </div>
                                 ))}
                             </div>

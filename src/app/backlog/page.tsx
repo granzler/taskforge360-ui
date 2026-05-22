@@ -18,10 +18,19 @@ import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
 import CreateUserStoryModal from '@/features/backlog/components/CreateUserStoryModal';
 import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function BacklogPage() {
+    const { hasRole, hasScope } = usePermission();
     const [activeTab, setActiveTab] = useState<'sprints' | 'epics'>('sprints');
     const { selectedProject } = useProject();
+
+    const canCreateSprint = hasRole('scrum-master') || hasRole('system-admin') || hasScope('sprints:create');
+    const canDeleteSprint = hasRole('scrum-master') || hasRole('system-admin') || hasScope('sprints:delete');
+    const canCreateStory = hasRole('developer') || hasRole('product-owner') || hasRole('system-admin') || hasScope('userstories:create');
+    const canUpdateStory = hasRole('developer') || hasRole('product-owner') || hasRole('system-admin') || hasScope('userstories:update');
+    const canCreateEpic = hasRole('product-owner') || hasRole('system-admin') || hasScope('epics:create');
+    const canUpdateEpic = hasRole('product-owner') || hasRole('system-admin') || hasScope('epics:update');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreateEpicModal, setShowCreateEpicModal] = useState(false);
     const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
@@ -247,6 +256,9 @@ export default function BacklogPage() {
                 onSprintDeleted={handleSprintDeleted}
                 onStoryCreated={handleStoryCreated}
                 onStoryUpdated={handleStoryUpdated}
+                canDeleteSprint={canDeleteSprint}
+                canCreateStory={canCreateStory}
+                canUpdateStory={canUpdateStory}
             />
         );
     };
@@ -267,22 +279,26 @@ export default function BacklogPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            disabled={!selectedProject}
-                            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <Calendar size={16} />
-                            Plan Sprint
-                        </button>
-                        <button
-                            onClick={() => setShowCreateStoryModal(true)}
-                            disabled={!selectedProject}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <Plus size={18} />
-                            Create Story
-                        </button>
+                        {canCreateSprint && (
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                disabled={!selectedProject}
+                                className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <Calendar size={16} />
+                                Plan Sprint
+                            </button>
+                        )}
+                        {canCreateStory && (
+                            <button
+                                onClick={() => setShowCreateStoryModal(true)}
+                                disabled={!selectedProject}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <Plus size={18} />
+                                Create Story
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -327,6 +343,9 @@ export default function BacklogPage() {
                                     onCreateEpic={() => setShowCreateEpicModal(true)}
                                     onEditEpic={handleEditEpic}
                                     onLinkStory={handleLinkStory}
+                                    canCreateEpic={canCreateEpic}
+                                    canUpdateEpic={canUpdateEpic}
+                                    canLinkStory={canUpdateStory}
                                 />
                             </>
                         )
