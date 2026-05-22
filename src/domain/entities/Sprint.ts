@@ -11,6 +11,7 @@ export interface Sprint {
     projectId: number;
     status: SprintStatus;
     velocity: number;
+    concurrencyVersion: number;
 }
 
 export interface CreateSprintDto {

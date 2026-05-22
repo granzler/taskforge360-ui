@@ -68,6 +68,7 @@ export default function EditUserStoryModal({
             priority: data.priority,
             assignedTo: data.assignedTo,
             labelIds: data.labelIds,
+            concurrencyVersion: story.concurrencyVersion,
         };
 
         await update(story.id, dto);

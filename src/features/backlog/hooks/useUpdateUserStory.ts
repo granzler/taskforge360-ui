@@ -32,7 +32,7 @@ export function useUpdateUserStory(options?: UseUpdateUserStoryOptions) {
                 return false;
             }
         } catch (err) {
-            const errorMsg = 'Could not update user story. Please try again.';
+            const errorMsg = err instanceof Error ? err.message : 'Could not update user story. Please try again.';
             console.error('Failed to update user story (exception):', err);
             setError(errorMsg);
             toast.error(errorMsg);

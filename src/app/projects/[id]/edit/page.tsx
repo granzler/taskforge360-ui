@@ -72,14 +72,14 @@ export default function EditProjectPage({ params }: PageProps) {
             const hasChanges = toAdd.length > 0 || toRemove.length > 0;
 
             if (hasChanges) {
-                const assignResults = await Promise.all([
-                    ...toAdd.map(u => projectService.assignUser(projectId, u.id)),
-                    ...toRemove.map(u => projectService.removeUser(projectId, u.userId))
-                ]);
-                
-                if (assignResults.some(r => !r.success)) {
-                    toast.error('Project updated, but some user assignments failed.');
+                if (toAdd.length > 0) {
+                    await projectService.assignUsers(projectId, toAdd.map(u => u.id), project.concurrencyVersion);
                 }
+                
+                // Handle removals
+                // (Note: if removeUser also needs concurrencyVersion, it should be added here)
+                await Promise.all(toRemove.map(u => projectService.removeUser(projectId, u.userId)));
+                
                 await refreshProjects();
             }
         }

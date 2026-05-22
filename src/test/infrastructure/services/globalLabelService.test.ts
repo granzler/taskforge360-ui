@@ -15,8 +15,8 @@ describe('globalLabelService', () => {
     describe('getAll', () => {
         it('should return all labels', async () => {
             const mockLabels: GlobalLabelDto[] = [
-                { id: 1, tagName: 'Bug', description: 'Bug label' },
-                { id: 2, tagName: 'Feature', description: 'Feature label' },
+                { id: 1, tagName: 'Bug', description: 'Bug label', concurrencyVersion: 1 },
+                { id: 2, tagName: 'Feature', description: 'Feature label', concurrencyVersion: 1 },
             ];
 
             mock.onGet('/api/Labels').reply(200, mockLabels);
@@ -39,7 +39,7 @@ describe('globalLabelService', () => {
 
     describe('getById', () => {
         it('should return label by id', async () => {
-            const mockLabel: GlobalLabelDto = { id: 1, tagName: 'Bug', description: 'Bug label' };
+            const mockLabel: GlobalLabelDto = { id: 1, tagName: 'Bug', description: 'Bug label', concurrencyVersion: 1 };
 
             mock.onGet('/api/Labels/1').reply(200, mockLabel);
 
@@ -60,7 +60,7 @@ describe('globalLabelService', () => {
 
     describe('create', () => {
         it('should create a new label', async () => {
-            const newLabel: GlobalLabelDto = { id: 3, tagName: 'Improvement', description: 'Improvement label' };
+            const newLabel: GlobalLabelDto = { id: 3, tagName: 'Improvement', description: 'Improvement label', concurrencyVersion: 1 };
 
             mock.onPost('/api/Labels').reply(201, newLabel);
 
@@ -87,13 +87,14 @@ describe('globalLabelService', () => {
 
     describe('update', () => {
         it('should update an existing label', async () => {
-            const updatedLabel: GlobalLabelDto = { id: 1, tagName: 'Bug', description: 'Updated bug description' };
+            const updatedLabel: GlobalLabelDto = { id: 1, tagName: 'Bug', description: 'Updated bug description', concurrencyVersion: 2 };
 
             mock.onPut('/api/Labels/1').reply(200, updatedLabel);
 
             const result = await globalLabelService.update(1, {
                 tagName: 'Bug',
                 description: 'Updated bug description',
+                concurrencyVersion: 1,
             });
 
             expect(result.success).toBe(true);
@@ -106,6 +107,7 @@ describe('globalLabelService', () => {
             const result = await globalLabelService.update(999, {
                 tagName: 'Test',
                 description: 'Test',
+                concurrencyVersion: 1,
             });
 
             expect(result.success).toBe(false);

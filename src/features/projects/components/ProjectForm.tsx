@@ -16,7 +16,7 @@ interface ProjectFormProps {
 export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps) {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formData, setFormData] = useState<CreateProjectDto>({
+    const [formData, setFormData] = useState<Omit<CreateProjectDto, 'concurrencyVersion'> & { concurrencyVersion?: number }>({
         name: '',
         description: '',
         sprintDurationDays: 14,
@@ -29,6 +29,7 @@ export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps)
                 name: initialData.name,
                 description: initialData.description,
                 sprintDurationDays: initialData.sprintDurationDays,
+                concurrencyVersion: initialData.concurrencyVersion,
             });
 
             // Populate selected users if available in initialData
@@ -53,8 +54,6 @@ export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps)
             } else {
                 await onSubmit(formData, selectedUsers);
             }
-            router.push('/projects');
-            router.refresh();
         } catch (error) {
             console.error('Error submitting form:', error);
             alert('Failed to save project. Please check the console for details.');

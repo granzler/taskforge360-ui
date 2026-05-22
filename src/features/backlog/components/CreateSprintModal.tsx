@@ -64,8 +64,9 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
                 toast.error(result.errors.map(e => e.message).join(', ') || 'Could not create the sprint.');
             }
         } catch (err) {
+            const errorMsg = err instanceof Error ? err.message : 'Could not create the sprint. Please try again.';
             console.error('Failed to create sprint (exception):', err);
-            toast.error('Could not create the sprint. Please try again.');
+            toast.error(errorMsg);
         } finally {
             setIsSubmitting(false);
         }

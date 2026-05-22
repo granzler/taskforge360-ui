@@ -8,10 +8,13 @@ const mockEpic: EpicResponseDto = {
   id: 1,
   title: 'Test Epic',
   description: 'Test Description',
+  acceptanceCriteria: 'Test criteria',
   projectId: 1,
   priority: 1,
   statusId: 1,
   statusName: 'In Progress',
+  userStories: [],
+  concurrencyVersion: 1,
 };
 
 const mockLinkedStory: UserStoryDto = {
@@ -23,6 +26,7 @@ const mockLinkedStory: UserStoryDto = {
   projectId: 1,
   storyPoints: 5,
   epicId: 1,
+  concurrencyVersion: 1,
 };
 
 const mockUnlinkedStory: UserStoryDto = {
@@ -33,6 +37,7 @@ const mockUnlinkedStory: UserStoryDto = {
   priority: 2,
   projectId: 1,
   storyPoints: 3,
+  concurrencyVersion: 1,
 };
 
 describe('EpicsTab', () => {

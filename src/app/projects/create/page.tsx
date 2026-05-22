@@ -5,6 +5,7 @@ import ProjectForm from '@/features/projects/components/ProjectForm';
 import { projectService } from '@/infrastructure/services/projectService';
 import { CreateProjectDto } from '@/domain/entities/Project';
 import { UserSearchResult } from '@/domain/entities/User';
+import { useProject } from '@/features/projects/context/ProjectContext';
 
 import { ArrowLeft, FolderPlus } from 'lucide-react';
 import Link from 'next/link';
@@ -13,6 +14,7 @@ import { toast } from 'react-hot-toast';
 
 export default function CreateProjectPage() {
     const router = useRouter();
+    const { refreshProjects } = useProject();
 
     const handleCreate = async (data: CreateProjectDto, users?: UserSearchResult[]) => {
         // Cast to CreateProjectDto because the form passes a union type but we know handled by service
@@ -25,13 +27,22 @@ export default function CreateProjectPage() {
         }
 
         if (users && users.length > 0 && newProjectResult.data.id) {
-            await Promise.all(users.map(user =>
-                projectService.assignUser(newProjectResult.data.id, user.id)
-            ));
+            const result = await projectService.assignUsers(
+                newProjectResult.data.id, 
+                users.map(u => u.id), 
+                newProjectResult.data.concurrencyVersion
+            );
+            if (!result.success) {
+                const errorMessage = result.errors.map(e => e.message).join(', ');
+                toast.error(`Failed to assign users: ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
         }
 
         toast.success('Project created successfully!');
+        await refreshProjects();
         router.push('/projects');
+        router.refresh();
     };
 
     return (

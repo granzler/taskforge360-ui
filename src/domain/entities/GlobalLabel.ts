@@ -2,6 +2,7 @@ export interface GlobalLabelDto {
     id: number;
     tagName: string;
     description: string;
+    concurrencyVersion: number;
 }
 
 export interface CreateLabelRequestDto {
@@ -12,4 +13,5 @@ export interface CreateLabelRequestDto {
 export interface UpdateLabelRequestDto {
     tagName: string;
     description: string;
+    concurrencyVersion: number;
 }

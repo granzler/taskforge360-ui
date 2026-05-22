@@ -1,6 +1,41 @@
 import axios from 'axios';
 import { getSession, signOut } from 'next-auth/react';
 import { ApiException } from './exceptions';
+import { ApiErrorResponse } from '@/domain/types';
+
+/**
+ * Normalizes backend error responses that might come in different casings
+ * (e.g., PascalCase from .NET vs camelCase from our TypeScript definitions).
+ */
+const normalizeErrorResponse = (data: any): ApiErrorResponse => {
+    if (!data) {
+        return {
+            traceId: 'unknown',
+            errors: [{ code: 'UNKNOWN_ERROR', message: 'Unknown error occurred', type: 'System' }]
+        };
+    }
+
+    const errors = (data.errors || data.Errors || []).map((e: any) => ({
+        code: e.code || e.Code || 'UNKNOWN_CODE',
+        message: e.message || e.Message || 'An unexpected error occurred',
+        type: e.type || e.Type || 'Error'
+    }));
+
+    // If no errors found but data has a message (fallback)
+    if (errors.length === 0 && (data.message || data.Message)) {
+        errors.push({
+            code: data.code || data.Code || 'ERROR',
+            message: data.message || data.Message,
+            type: data.type || data.Type || 'Error'
+        });
+    }
+
+    return {
+        traceId: data.traceId || data.TraceId || 'unknown',
+        errors: errors.length > 0 ? errors : [{ code: 'UNKNOWN_ERROR', message: 'An unexpected error occurred', type: 'System' }]
+    };
+};
+
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7157/',
@@ -32,16 +67,18 @@ api.interceptors.response.use(
                     import('react-hot-toast').then(({ toast }) => toast.error('Session expired. Please log in again.'));
                     await signOut({ callbackUrl: '/login?session_expired=true' });
                 }
-            } else if ([400, 404, 409].includes(status) && data && data.errors) {
+            } else if ([400, 404, 409].includes(status) && data) {
                 // The Result pattern returns a structured error response
-                throw new ApiException(data);
+                // We normalize it to handle PascalCase/camelCase differences
+                const normalizedError = normalizeErrorResponse(data);
+                throw new ApiException(normalizedError);
             } else {
                 // Handle other errors (500, etc.) with fallback
                 throw new ApiException({
-                    traceId: 'unknown',
+                    traceId: data?.TraceId || data?.traceId || 'unknown',
                     errors: [{
                         code: 'HTTP_ERROR',
-                        message: `Server returned ${status}: ${data?.message || error.message}`,
+                        message: `Server returned ${status}: ${data?.Message || data?.message || error.message}`,
                         type: 'System'
                     }]
                 });

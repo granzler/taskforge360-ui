@@ -195,6 +195,7 @@ export default function BacklogPage() {
                 epicId: epicId,
                 assignedTo: currentStory.assignedTo,
                 labelIds: currentStory.labels?.map(l => l.id),
+                concurrencyVersion: currentStory.concurrencyVersion,
             });
             
             if (result.success) {
