@@ -8,6 +8,7 @@ import { useProject } from '@/features/projects/context/ProjectContext';
 import { Plus, Edit, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function ProjectsPage() {
@@ -29,11 +30,8 @@ export default function ProjectsPage() {
     const fetchProjects = async () => {
         try {
             const result = await projectService.getAll();
-            if (result.success) {
+            if (notifyResult(result)) {
                 setProjects(result.data);
-            } else {
-                console.error('Failed to fetch projects:', result.errors);
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to load projects.');
             }
         } catch (err) {
             console.error('Failed to fetch projects (exception):', err);

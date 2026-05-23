@@ -21,6 +21,7 @@ import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
 import CreateUserStoryModal from '@/features/backlog/components/CreateUserStoryModal';
 import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function BacklogPage() {
@@ -110,16 +111,13 @@ export default function BacklogPage() {
                 concurrencyVersion: currentStory.concurrencyVersion,
             });
 
-            if (result.success) {
+            if (notifyResult(result, { success: 'Story linked to epic!' })) {
                 invalidateAll();
-                toast.success('Story linked to epic!');
                 return true;
             }
-            toast.error('Failed to link story');
             return false;
         } catch (err) {
             console.error('Failed to link story:', err);
-            toast.error('Failed to link story');
             return false;
         }
     };

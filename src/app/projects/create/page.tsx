@@ -12,6 +12,7 @@ import { ArrowLeft, FolderPlus } from 'lucide-react';
 import Link from 'next/link';
 
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 
 export default function CreateProjectPage() {
     const router = useRouter();
@@ -33,10 +34,8 @@ export default function CreateProjectPage() {
         // Cast to CreateProjectDto because the form passes a union type but we know handled by service
         const newProjectResult = await projectService.create(data as CreateProjectDto);
 
-        if (!newProjectResult.success) {
-            const errorMessage = newProjectResult.errors.map(e => e.message).join(', ');
-            toast.error(errorMessage || 'Failed to create project.');
-            throw new Error(errorMessage);
+        if (!notifyResult(newProjectResult)) {
+            throw new Error(newProjectResult.errors.map(e => e.message).join(', '));
         }
 
         if (users && users.length > 0 && newProjectResult.data.id) {
@@ -45,10 +44,8 @@ export default function CreateProjectPage() {
                 users.map(u => u.id), 
                 newProjectResult.data.concurrencyVersion
             );
-            if (!result.success) {
-                const errorMessage = result.errors.map(e => e.message).join(', ');
-                toast.error(`Failed to assign users: ${errorMessage}`);
-                throw new Error(errorMessage);
+            if (!notifyResult(result)) {
+                throw new Error(result.errors.map(e => e.message).join(', '));
             }
         }
 

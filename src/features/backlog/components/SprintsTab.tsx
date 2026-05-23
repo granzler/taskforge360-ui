@@ -21,6 +21,7 @@ import { Sprint } from '@/domain/entities/Sprint';
 import { userStoryService } from '@/infrastructure/services/userStoryService';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 import UserStoryItem, { type UserStoryItemProps } from './UserStoryItem';
 import CreateUserStoryModal from './CreateUserStoryModal';
 import EditUserStoryModal from './EditUserStoryModal';
@@ -202,11 +203,8 @@ const SprintsTab = memo(function SprintsTab({
                 concurrencyVersion: story.concurrencyVersion,
             });
 
-            if (result.success) {
+            if (notifyResult(result, { success: `Story moved to ${newSprintId ? sprints.find(s => s.id === newSprintId)?.name || 'sprint' : 'backlog'}!` })) {
                 onStoryUpdated?.(result.data);
-                toast.success(`Story moved to ${newSprintId ? sprints.find(s => s.id === newSprintId)?.name || 'sprint' : 'backlog'}!`);
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to move story.');
             }
         } catch (err) {
             console.error('Failed to move story:', err);
@@ -220,12 +218,9 @@ const SprintsTab = memo(function SprintsTab({
         setIsDeleting(true);
         try {
             const result = await sprintService.delete(sprintToDelete.id);
-            if (result.success) {
-                toast.success(`Sprint "${sprintToDelete.name}" deleted successfully.`);
+            if (notifyResult(result, { success: `Sprint "${sprintToDelete.name}" deleted successfully.` })) {
                 onSprintDeleted(sprintToDelete.id);
                 setSprintToDelete(null);
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to delete sprint.');
             }
         } catch (err) {
             console.error('Failed to delete sprint:', err);

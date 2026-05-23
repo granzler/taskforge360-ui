@@ -10,6 +10,7 @@ import { getEpicPriorityColor, getStatusIcon, getPriorityColor } from '@/lib/uti
 import { USER_STORY_STATUS_LABELS, UserStoryStatus, Status } from '@/domain/types';
 import { LabelBadge } from '@/features/labels/components/LabelBadge';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 
 interface UserStoryItemProps {
     story: UserStoryDto;
@@ -37,13 +38,10 @@ const UserStoryItem = memo(function UserStoryItem({ story, isExpanded, onToggle,
                 userStoryId: story.id,
             });
 
-            if (result.success) {
-                toast.success('Subtask added!');
+            if (notifyResult(result, { success: 'Subtask added!' })) {
                 setSubtaskTitle('');
                 setShowAddSubtask(false);
                 onSubtaskCreated?.(result.data);
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to create subtask.');
             }
         } catch (err) {
             console.error('Failed to create subtask:', err);

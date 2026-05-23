@@ -8,6 +8,7 @@ import { projectService } from '@/infrastructure/services/projectService';
 import { ArrowLeft, Calendar, Edit, Loader2, Save, Trash2, FolderOpen, Users, Clock } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import TeamMembersPanel from '@/features/projects/components/TeamMembersPanel';
@@ -86,16 +87,12 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                 concurrencyVersion: editForm.concurrencyVersion,
             });
 
-            if (updateResult.success) {
-                // Update local state
+            if (notifyResult(updateResult, { success: 'Project updated successfully.' })) {
                 setProject({
                     ...project,
                     ...editForm
                 });
                 setIsEditing(false);
-                toast.success('Project updated successfully.');
-            } else {
-                toast.error(updateResult.errors.map(e => e.message).join(', ') || 'Failed to update project.');
             }
         } catch (err) {
             console.error('Failed to update project:', err);
@@ -304,6 +301,7 @@ export default function ProjectDetailsPage({ params }: PageProps) {
                         users={users}
                         onUsersChanged={refreshUsers}
                         canUpdateProject={canUpdateProject}
+                        concurrencyVersion={project?.concurrencyVersion}
                     />
                 </div>
             </div>

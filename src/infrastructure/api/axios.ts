@@ -16,12 +16,28 @@ const normalizeErrorResponse = (data: any): ApiErrorResponse => {
         };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const errors = (data.errors || data.Errors || []).map((e: any) => ({
-        code: e.code || e.Code || 'UNKNOWN_CODE',
-        message: e.message || e.Message || 'An unexpected error occurred',
-        type: e.type || e.Type || 'Error'
-    }));
+    const rawErrors = data.errors || data.Errors || [];
+
+    let errors: { code: string; message: string; type: string }[];
+
+    if (Array.isArray(rawErrors)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        errors = rawErrors.map((e: any) => ({
+            code: e.code || e.Code || 'UNKNOWN_CODE',
+            message: e.message || e.Message || 'An unexpected error occurred',
+            type: e.type || e.Type || 'Error'
+        }));
+    } else if (typeof rawErrors === 'object' && rawErrors !== null) {
+        errors = Object.entries(rawErrors).flatMap(([field, messages]) =>
+            (Array.isArray(messages) ? messages : [messages]).map((msg) => ({
+                code: 'VALIDATION_ERROR',
+                message: typeof msg === 'string' ? msg : `${field}: ${msg}`,
+                type: 'Validation'
+            }))
+        );
+    } else {
+        errors = [];
+    }
 
     // If no errors found but data has a message (fallback)
     if (errors.length === 0 && (data.message || data.Message)) {

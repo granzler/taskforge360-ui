@@ -7,6 +7,7 @@ import { GlobalLabelDto, UpdateLabelRequestDto } from '@/domain/entities/GlobalL
 import { globalLabelService } from '@/infrastructure/services/globalLabelService';
 import { ArrowLeft, Tag, Loader2, Save, X, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 
 interface PageProps {
@@ -74,17 +75,14 @@ export default function EditLabelPage({ params }: PageProps) {
                 concurrencyVersion: formData.concurrencyVersion,
             });
 
-            if (result.success) {
+            if (notifyResult(result)) {
                 toast.success(`Label "${result.data.tagName}" updated successfully!`);
                 router.push('/admin/labels');
-            } else {
-                const errorMessage = result.errors.map(e => e.message).join(', ');
-                toast.error(errorMessage || 'Failed to update label.');
-                setIsSaving(false);
             }
         } catch (err) {
             console.error('Failed to update label:', err);
             toast.error('Failed to update label. Please try again.');
+        } finally {
             setIsSaving(false);
         }
     };
@@ -94,15 +92,11 @@ export default function EditLabelPage({ params }: PageProps) {
 
         try {
             const result = await globalLabelService.delete(labelId);
-            if (result.success) {
-                toast.success('Label deleted successfully!');
+            if (notifyResult(result, { success: 'Label deleted successfully!' })) {
                 router.push('/admin/labels');
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to delete label.');
             }
         } catch (err) {
             console.error('Failed to delete label:', err);
-            toast.error('Failed to delete label.');
         }
     };
 

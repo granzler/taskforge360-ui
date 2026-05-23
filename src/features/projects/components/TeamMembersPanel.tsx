@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { UserSearchResult } from '@/domain/entities/User';
 import { projectService } from '@/infrastructure/services/projectService';
-import { toast } from 'react-hot-toast';
 import UserAssigner from '@/features/auth/components/UserAssigner';
+import { notifyResult } from '@/lib/utils/notify';
 import { Mail, Trash2, Users } from 'lucide-react';
 
 interface TeamMembersPanelProps {
@@ -12,9 +12,10 @@ interface TeamMembersPanelProps {
     users: UserSearchResult[];
     onUsersChanged: () => Promise<void>;
     canUpdateProject: boolean;
+    concurrencyVersion?: number;
 }
 
-export default function TeamMembersPanel({ projectId, users, onUsersChanged, canUpdateProject }: TeamMembersPanelProps) {
+export default function TeamMembersPanel({ projectId, users, onUsersChanged, canUpdateProject, concurrencyVersion }: TeamMembersPanelProps) {
     const [isRemoving, setIsRemoving] = useState<Record<string, boolean>>({});
 
     const handleRemoveUser = async (userId: string) => {
@@ -23,15 +24,11 @@ export default function TeamMembersPanel({ projectId, users, onUsersChanged, can
         setIsRemoving(prev => ({ ...prev, [userId]: true }));
         try {
             const result = await projectService.removeUser(projectId, userId);
-            if (result.success) {
-                toast.success('User removed from project.');
+            if (notifyResult(result, { success: 'User removed from project.' })) {
                 await onUsersChanged();
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to remove user.');
             }
         } catch (err) {
             console.error('Failed to remove user:', err);
-            toast.error('Failed to remove user.');
         } finally {
             setIsRemoving(prev => ({ ...prev, [userId]: false }));
         }
@@ -39,16 +36,12 @@ export default function TeamMembersPanel({ projectId, users, onUsersChanged, can
 
     const handleAssignUser = async (user: UserSearchResult) => {
         try {
-            const result = await projectService.assignUser(projectId, user.id, 0);
-            if (result.success) {
-                toast.success('User added to project.');
+            const result = await projectService.assignUser(projectId, user.id, concurrencyVersion ?? 1);
+            if (notifyResult(result, { success: 'User added to project.' })) {
                 await onUsersChanged();
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to assign user.');
             }
         } catch (err) {
             console.error('Failed to assign user:', err);
-            toast.error('Failed to assign user.');
         }
     };
 

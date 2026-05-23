@@ -7,6 +7,7 @@ import { globalLabelService } from '@/infrastructure/services/globalLabelService
 import { Plus, Edit, Search, Trash2, Tag } from 'lucide-react';
 import { SkeletonList } from '@/components/ui';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function AdminLabelsPage() {
@@ -27,11 +28,8 @@ export default function AdminLabelsPage() {
     const fetchLabels = async () => {
         try {
             const result = await globalLabelService.getAll();
-            if (result.success) {
+            if (notifyResult(result)) {
                 setLabels(result.data);
-            } else {
-                console.error('Failed to fetch labels:', result.errors);
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to load labels.');
             }
         } catch (err) {
             console.error('Failed to fetch labels (exception):', err);
