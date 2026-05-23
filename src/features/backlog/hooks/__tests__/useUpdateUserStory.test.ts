@@ -51,6 +51,7 @@ describe('useUpdateUserStory', () => {
         statusId: 2,
         priority: 2,
         projectId: 1,
+        concurrencyVersion: 1,
       } as UpdateUserStoryRequestDto);
       expect(success).toBe(true);
     });
@@ -101,7 +102,7 @@ describe('useUpdateUserStory', () => {
       expect(success).toBe(false);
     });
 
-    expect(mockToast.error).toHaveBeenCalledWith('Could not update user story. Please try again.');
+    expect(mockToast.error).toHaveBeenCalledWith('Network error');
   });
 
   it('should set loading state during update', async () => {

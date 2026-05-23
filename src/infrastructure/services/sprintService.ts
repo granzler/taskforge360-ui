@@ -1,14 +1,9 @@
 import api from '../api/axios';
-import { Sprint, SprintStatus } from '@/domain/entities/Sprint';
+import { Sprint, SprintStatus, CreateSprintDto } from '@/domain/entities/Sprint';
 import { Result } from '@/domain/types';
 import { handleApiCall } from '../api/apiHelper';
 
-export interface CreateSprintDto {
-    name: string;
-    startDate: string;
-    endDate: string;
-    projectId: number;
-}
+export type { CreateSprintDto };
 
 export const sprintService = {
     getByProject: (projectId: number): Promise<Result<Sprint[]>> => {

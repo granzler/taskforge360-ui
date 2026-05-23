@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Project } from '@/domain/entities/Project';
 import { projectService } from '@/infrastructure/services/projectService';
 import { useProject } from '@/features/projects/context/ProjectContext';
-import { Plus, Edit, Loader2, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
+import { Plus, Edit, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui';
 import { toast } from 'react-hot-toast';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 
@@ -90,8 +91,10 @@ export default function ProjectsPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center min-h-[50vh]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="container mx-auto px-4 py-8 max-w-6xl">
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
             </div>
         );
     }

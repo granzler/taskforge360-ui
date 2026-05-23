@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { GlobalLabelDto } from '@/domain/entities/GlobalLabel';
 import { globalLabelService } from '@/infrastructure/services/globalLabelService';
-import { Plus, Edit, Loader2, Search, Trash2, Tag } from 'lucide-react';
+import { Plus, Edit, Search, Trash2, Tag } from 'lucide-react';
+import { SkeletonList } from '@/components/ui';
 import { toast } from 'react-hot-toast';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 
@@ -131,9 +132,7 @@ export default function AdminLabelsPage() {
                 </div>
 
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 size={32} className="animate-spin text-slate-400" />
-                    </div>
+                    <SkeletonList rows={5} />
                 ) : filteredLabels.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                         <Tag size={48} className="mb-4 opacity-30" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Plus, Layers, Pencil, Mountain, ChevronDown, Loader2 } from 'lucide-react';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { UserStoryDto } from '@/domain/entities/UserStory';
@@ -168,7 +168,7 @@ function EpicCard({
     );
 }
 
-export default function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic, onLinkStory, canCreateEpic = false, canUpdateEpic = false, canLinkStory = false }: EpicsTabProps) {
+const EpicsTab = memo(function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic, onLinkStory, canCreateEpic = false, canUpdateEpic = false, canLinkStory = false }: EpicsTabProps) {
     if (epics.length === 0) {
         return (
             <EmptyState
@@ -236,4 +236,6 @@ export default function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic,
             )}
         </div>
     );
-}
+});
+
+export default EpicsTab;

@@ -66,6 +66,7 @@ describe('EpicsTab', () => {
         userStories={[]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
+        canCreateEpic={true}
       />
     );
 
@@ -142,6 +143,7 @@ describe('EpicsTab', () => {
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
         onLinkStory={vi.fn()}
+        canLinkStory={true}
       />
     );
 

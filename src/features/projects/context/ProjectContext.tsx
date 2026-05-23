@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { UserProject } from '@/domain/entities/Project';
 import { projectService } from '@/infrastructure/services/projectService';
@@ -19,56 +20,49 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
     const { status } = useSession();
-    const [projects, setProjects] = useState<UserProject[]>([]);
-    const [selectedProject, setSelectedProjectState] = useState<UserProject | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const isInitializedRef = useRef(false);
+    const queryClient = useQueryClient();
 
-    const loadProjects = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const result = await projectService.getMyProjects();
-            if (result.success) {
-                setProjects(result.data);
-
-                if (!isInitializedRef.current) {
-                    const savedProjectId = localStorage.getItem(STORAGE_KEY);
-                    if (savedProjectId) {
-                        const savedProject = result.data.find(p => p.id === parseInt(savedProjectId, 10));
-                        if (savedProject) {
-                            setSelectedProjectState(savedProject);
-                        }
-                    }
-                    isInitializedRef.current = true;
-                }
-            } else {
-                 console.error('Failed to load user projects:', result.errors);
-                 setProjects([]);
-            }
-        } catch (err) {
-            console.error('Failed to load user projects (exception):', err);
-            setProjects([]);
-        } finally {
-            setIsLoading(false);
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? parseInt(saved, 10) : null;
         }
-    }, []);
+        return null;
+    });
 
-    const handleSetSelectedProject = (project: UserProject | null) => {
-        setSelectedProjectState(project);
+    const { data: projects = [], isLoading } = useQuery<UserProject[]>({
+        queryKey: ['my-projects'],
+        queryFn: async () => {
+            const result = await projectService.getMyProjects();
+            if (!result.success) {
+                throw new Error(result.errors.map(e => e.message).join(', '));
+            }
+            return result.data;
+        },
+        enabled: status === 'authenticated',
+        staleTime: 60 * 1000,
+    });
+
+    const selectedProject = useMemo(() => {
+        if (!selectedProjectId) return null;
+        return projects.find(p => p.id === selectedProjectId) || null;
+    }, [projects, selectedProjectId]);
+
+    const handleSetSelectedProject = useCallback((project: UserProject | null) => {
+        setSelectedProjectId(project?.id ?? null);
         if (project) {
             localStorage.setItem(STORAGE_KEY, project.id.toString());
         } else {
             localStorage.removeItem(STORAGE_KEY);
         }
-    };
+    }, []);
 
-    useEffect(() => {
-        if (status !== 'authenticated') return;
-        loadProjects();
-    }, [status, loadProjects]);
+    const refreshProjects = useCallback(async () => {
+        await queryClient.invalidateQueries({ queryKey: ['my-projects'] });
+    }, [queryClient]);
 
     return (
-        <ProjectContext.Provider value={{ projects, selectedProject, setSelectedProject: handleSetSelectedProject, isLoading, refreshProjects: loadProjects }}>
+        <ProjectContext.Provider value={{ projects, selectedProject, setSelectedProject: handleSetSelectedProject, isLoading, refreshProjects }}>
             {children}
         </ProjectContext.Provider>
     );

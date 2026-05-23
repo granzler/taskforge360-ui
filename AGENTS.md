@@ -6,12 +6,14 @@ TaskForge360 is a Next.js 16 application with React 19, TypeScript, and Tailwind
 ## Build/Lint/Test Commands
 
 ```bash
-npm run dev           # Start Next.js dev server on port 3000
+npm run dev           # Start Next.js dev server on port 3000 (uses --no-deprecation to suppress DEP0205 from Turbopack)
 npm run build         # Production build
 npm run start         # Start production server
 npm run lint          # Run ESLint
 npx tsc --noEmit      # TypeScript type check
-# No tests configured yet. Use Vitest + React Testing Library if adding tests.
+npm run test          # Run Vitest tests (35+ tests across components, hooks, services)
+npx vitest run        # Run tests once (CI mode)
+npx vitest --ui       # Run tests with Vitest UI
 ```
 
 ---
@@ -167,6 +169,10 @@ export function useProject() {
 3. Use service in components/pages
 
 ---
+
+## TODOs
+
+- **Remove `--no-deprecation` from `npm run dev`** when Next.js/Turbopack migrates from `module.register()` to `module.registerHooks()` (Node.js 26 DEP0205)
 
 ## Resources
 - [Next.js 16 Docs](https://nextjs.org/docs)

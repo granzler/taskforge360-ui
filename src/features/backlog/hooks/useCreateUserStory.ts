@@ -32,7 +32,7 @@ export function useCreateUserStory(options?: UseCreateUserStoryOptions) {
                 return false;
             }
         } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Could create user story. Please try again.';
+            const errorMsg = err instanceof Error ? err.message : 'Could not create user story. Please try again.';
             console.error('Failed to create user story (exception):', err);
             setError(errorMsg);
             toast.error(errorMsg);

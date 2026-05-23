@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { globalLabelService, GlobalLabelDto } from '@/infrastructure/services/globalLabelService';
 import { X, Loader2, Plus } from 'lucide-react';
 
@@ -10,7 +10,7 @@ interface LabelSelectorProps {
     disabled?: boolean;
 }
 
-export function LabelSelector({ selectedLabelIds, onChange, disabled = false }: LabelSelectorProps) {
+export const LabelSelector = memo(function LabelSelector({ selectedLabelIds, onChange, disabled = false }: LabelSelectorProps) {
     const [labels, setLabels] = useState<GlobalLabelDto[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
@@ -118,4 +118,4 @@ export function LabelSelector({ selectedLabelIds, onChange, disabled = false }: 
             )}
         </div>
     );
-}
+});

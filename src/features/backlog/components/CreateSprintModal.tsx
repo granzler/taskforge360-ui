@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, Loader2 } from 'lucide-react';
-import { sprintService, CreateSprintDto } from '@/infrastructure/services/sprintService';
-import { Sprint } from '@/domain/entities/Sprint';
+import { sprintService } from '@/infrastructure/services/sprintService';
+import { Sprint, CreateSprintDto } from '@/domain/entities/Sprint';
 import { toast } from 'react-hot-toast';
 
 interface CreateSprintModalProps {
