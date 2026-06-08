@@ -7,12 +7,12 @@ export default function UnauthorizedPage() {
     return (
         <div className="min-h-[80vh] flex items-center justify-center px-4 relative overflow-hidden">
             {/* Background glowing elements */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse -z-10" />
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-3xl motion-safe:animate-pulse -z-10" />
             <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl -z-10" />
 
             <div className="max-w-md w-full bg-card/60 backdrop-blur-xl border border-border/85 rounded-3xl p-8 shadow-2xl text-center transition-all duration-300 hover:border-red-500/30">
                 {/* Shield Alert Icon with animation */}
-                <div className="mx-auto w-20 h-20 bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center rounded-2xl mb-8 animate-pulse">
+                <div className="mx-auto w-20 h-20 bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center rounded-2xl mb-8 motion-safe:animate-pulse">
                     <ShieldAlert size={40} strokeWidth={2} />
                 </div>
 

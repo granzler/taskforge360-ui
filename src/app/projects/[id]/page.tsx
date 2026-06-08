@@ -144,10 +144,11 @@ export default function ProjectDetailsPage({ params }: PageProps) {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
             <Link
                 href="/projects"
                 className="group flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary mb-8 transition-colors w-fit"
+                aria-label="Back to projects"
             >
                 <div className="p-1 rounded-md bg-transparent group-hover:bg-primary/10 transition-colors">
                     <ArrowLeft size={16} />

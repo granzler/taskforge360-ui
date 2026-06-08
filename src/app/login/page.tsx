@@ -9,7 +9,6 @@ function LoginContent() {
   const error = searchParams.get('error');
 
   useEffect(() => {
-    // Automatically trigger Keycloak login if there's no error
     if (!error) {
       signIn('keycloak', { callbackUrl: 'http://localhost:3000/' });
     }
@@ -17,29 +16,37 @@ function LoginContent() {
 
   return (
     <div className="max-w-md w-full space-y-8">
-      <div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+      <div className="flex flex-col items-center gap-3">
+        <div className="bg-primary text-primary-foreground p-3 rounded-xl shadow-lg">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 11 12 14 22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg>
+        </div>
+        <h2 className="text-center text-3xl font-extrabold text-foreground">
           TaskForge360
         </h2>
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Error de autenticación!</strong>
-          <span className="block sm:inline"> Por favor intente nuevamente.</span>
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-xl" role="alert">
+          <strong className="font-bold">Authentication error!</strong>
+          <span className="block sm:inline"> Please try again.</span>
           <button
-            className="mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="mt-4 w-full flex justify-center py-2.5 px-4 rounded-xl text-sm font-bold text-primary-foreground bg-primary shadow-md hover:bg-primary/90 transition-all focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2"
             onClick={() => signIn('keycloak', { callbackUrl: 'http://localhost:3000/' })}
           >
-            Iniciar sesión
+            Sign In
           </button>
         </div>
       )}
 
       {!error && (
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Redirigiendo al inicio de sesión...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary/30 border-t-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground font-medium">
+            Redirecting to login...
+          </p>
         </div>
       )}
     </div>
@@ -48,8 +55,13 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Suspense fallback={<div>Loading...</div>}>
+    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4">
+      <Suspense fallback={
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary/30 border-t-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground font-medium">Loading...</p>
+        </div>
+      }>
         <LoginContent />
       </Suspense>
     </div>
