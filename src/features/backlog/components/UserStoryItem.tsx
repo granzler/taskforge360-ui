@@ -67,30 +67,30 @@ const UserStoryItem = memo(function UserStoryItem({ story, isExpanded, onToggle,
                         {story.labels && story.labels.length > 0 && (
                             <div className="flex flex-wrap gap-1">
                                 {story.labels.slice(0, 3).map(label => (
-                                    <LabelBadge key={label.id} tagName={label.tagName} className="text-[9px]" />
+                                    <LabelBadge key={label.id} tagName={label.tagName} className="text-[10px]" />
                                 ))}
                                 {story.labels.length > 3 && (
-                                    <span className="text-[9px] text-slate-400">+{story.labels.length - 3}</span>
+                                    <span className="text-[10px] text-slate-400">+{story.labels.length - 3}</span>
                                 )}
                             </div>
                         )}
                     </div>
                     {epic && (
-                        <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 shrink-0">
+                        <span className="text-[11px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 shrink-0">
                             {epic.title}
                         </span>
                     )}
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getEpicPriorityColor(story.priority)}`}>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${getEpicPriorityColor(story.priority)}`}>
                         {story.priority === 1 ? 'Low' : story.priority === 2 ? 'Medium' : story.priority === 3 ? 'High' : 'Critical'}
                     </span>
                     <div className="flex items-center gap-1 text-slate-400 text-xs">
                         <Target size={12} />
                         <span>{story.storyPoints} pts</span>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold border border-border" title={story.assignedTo || 'Unassigned'}>
+                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold border border-border" role="img" aria-label={story.assignedTo ? `Assigned to ${story.assignedTo}` : 'Unassigned'} title={story.assignedTo || 'Unassigned'}>
                         {story.assignedTo ? story.assignedTo.charAt(0).toUpperCase() : <User size={14} className="text-slate-400" />}
                     </div>
                 </div>
@@ -105,7 +105,7 @@ const UserStoryItem = memo(function UserStoryItem({ story, isExpanded, onToggle,
                                     {getStatusIcon(st.status)}
                                     <span>{st.title}</span>
                                 </div>
-                                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${getPriorityColor(st.priority)} opacity-80`}>
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${getPriorityColor(st.priority)} opacity-80`}>
                                     {st.priority}
                                 </span>
                             </div>

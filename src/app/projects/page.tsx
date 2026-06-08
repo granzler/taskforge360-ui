@@ -6,7 +6,7 @@ import { Project } from '@/domain/entities/Project';
 import { projectService } from '@/infrastructure/services/projectService';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { Plus, Edit, Search, FolderOpen, LayoutGrid, Clock } from 'lucide-react';
-import { SkeletonCard } from '@/components/ui';
+import { SkeletonCard, ConfirmModal } from '@/components/ui';
 import { toast } from 'react-hot-toast';
 import { notifyResult } from '@/lib/utils/notify';
 import { usePermission } from '@/features/auth/hooks/usePermission';
@@ -16,6 +16,7 @@ export default function ProjectsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { refreshProjects } = useProject();
     const { hasRole, hasScope } = usePermission();
 
@@ -43,8 +44,6 @@ export default function ProjectsPage() {
 
     const handleDelete = async () => {
         if (selectedProjects.length === 0) return;
-
-        if (!confirm(`Are you sure you want to delete ${selectedProjects.length} project(s)?`)) return;
 
         try {
             const results = await Promise.all(selectedProjects.map(id => projectService.delete(id)));
@@ -112,8 +111,8 @@ export default function ProjectsPage() {
                 <div className="flex items-center gap-3">
                     {selectedProjects.length > 0 && canDelete && (
                         <button
-                            onClick={handleDelete}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg text-sm font-bold shadow-sm hover:bg-red-200 dark:hover:bg-red-900/50 transition-all"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-destructive/10 text-destructive rounded-lg text-sm font-bold shadow-sm hover:bg-destructive/20 transition-all min-h-[44px]"
                         >
                             Delete {selectedProjects.length > 1 ? `(${selectedProjects.length})` : ''}
                         </button>
@@ -137,9 +136,12 @@ export default function ProjectsPage() {
                     <input
                         type="text"
                         placeholder="Search projects..."
+                        aria-label="Search projects"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-accent/30 border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all text-sm font-medium"
+                        className="w-full pl-10 pr-4 py-2 bg-accent/30 border-transparent rounded-xl transition-all text-sm font-medium
+                            focus-visible:outline-2 focus-visible:outline-primary/40 focus-visible:outline-offset-2 focus-visible:border-primary/50
+                        "
                     />
                 </div>
 
@@ -175,7 +177,7 @@ export default function ProjectsPage() {
                     )}
                 </div>
             ) : filteredProjects.length === 0 ? (
-                <div className="text-center py-16 border border-border border-dashed rounded-3xl bg-card/30">
+                <div className="text-center py-16 border border-border border-dashed rounded-3xl bg-card/30" aria-live="polite">
                     <p className="text-lg font-bold text-slate-400">No projects match your search.</p>
                     <button
                         onClick={() => setSearchTerm('')}
@@ -239,6 +241,16 @@ export default function ProjectsPage() {
                     ))}
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={showDeleteConfirm}
+                title={`Delete ${selectedProjects.length} project${selectedProjects.length > 1 ? 's' : ''}?`}
+                message={`Are you sure you want to delete ${selectedProjects.length} project${selectedProjects.length > 1 ? 's' : ''}? This action cannot be undone. All sprints, epics, and user stories within will also be deleted.`}
+                confirmLabel="Delete"
+                variant="danger"
+                onConfirm={handleDelete}
+                onCancel={() => setShowDeleteConfirm(false)}
+            />
         </div>
     );
 }

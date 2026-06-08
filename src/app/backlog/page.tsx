@@ -169,7 +169,7 @@ export default function BacklogPage() {
 
     return (
         <>
-            <div className="container mx-auto px-4 py-8 max-w-6xl">
+            <div className="container mx-auto px-4 py-8 max-w-7xl">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">
@@ -205,10 +205,14 @@ export default function BacklogPage() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1 p-1 bg-slate-200/50 dark:bg-slate-800/50 rounded-xl w-fit mb-8 border border-border">
+                <div className="flex items-center gap-1 p-1 bg-slate-200/50 dark:bg-slate-800/50 rounded-xl w-fit mb-8 border border-border" role="tablist" aria-label="Backlog views">
                     <button
                         onClick={() => setActiveTab('sprints')}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'sprints'
+                        role="tab"
+                        aria-selected={activeTab === 'sprints'}
+                        aria-controls="tabpanel-sprints"
+                        id="tab-sprints"
+                        className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 ${activeTab === 'sprints'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                             }`}
@@ -218,7 +222,11 @@ export default function BacklogPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('epics')}
-                        className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'epics'
+                        role="tab"
+                        aria-selected={activeTab === 'epics'}
+                        aria-controls="tabpanel-epics"
+                        id="tab-epics"
+                        className={`flex items-center gap-2 px-6 py-2 rounded-lg text-sm font-bold transition-all focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-2 ${activeTab === 'epics'
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                             }`}
@@ -228,7 +236,11 @@ export default function BacklogPage() {
                     </button>
                 </div>
 
-                <div className="min-h-[400px]">
+                <div className="min-h-[400px]"
+                    role="tabpanel"
+                    id={activeTab === 'sprints' ? 'tabpanel-sprints' : 'tabpanel-epics'}
+                    aria-labelledby={activeTab === 'sprints' ? 'tab-sprints' : 'tab-epics'}
+                >
                     {activeTab === 'sprints' ? renderSprintsContent() : (
                         isLoadingEpics ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -252,13 +264,6 @@ export default function BacklogPage() {
                 </div>
 
                 <style jsx global>{`
-                    .animate-spin-slow {
-                        animation: spin 3s linear infinite;
-                    }
-                    @keyframes spin {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
                     .custom-scrollbar::-webkit-scrollbar {
                         width: 4px;
                     }

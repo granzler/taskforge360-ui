@@ -6,6 +6,7 @@ import { projectService } from '@/infrastructure/services/projectService';
 import UserAssigner from '@/features/auth/components/UserAssigner';
 import { notifyResult } from '@/lib/utils/notify';
 import { Mail, Trash2, Users } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui';
 
 interface TeamMembersPanelProps {
     projectId: number;
@@ -17,10 +18,9 @@ interface TeamMembersPanelProps {
 
 export default function TeamMembersPanel({ projectId, users, onUsersChanged, canUpdateProject, concurrencyVersion }: TeamMembersPanelProps) {
     const [isRemoving, setIsRemoving] = useState<Record<string, boolean>>({});
+    const [userToRemove, setUserToRemove] = useState<UserSearchResult | null>(null);
 
-    const handleRemoveUser = async (userId: string) => {
-        if (!window.confirm('Are you sure you want to remove this user from the project?')) return;
-
+    const confirmAndRemoveUser = async (userId: string) => {
         setIsRemoving(prev => ({ ...prev, [userId]: true }));
         try {
             const result = await projectService.removeUser(projectId, userId);
@@ -31,6 +31,7 @@ export default function TeamMembersPanel({ projectId, users, onUsersChanged, can
             console.error('Failed to remove user:', err);
         } finally {
             setIsRemoving(prev => ({ ...prev, [userId]: false }));
+            setUserToRemove(null);
         }
     };
 
@@ -83,7 +84,7 @@ export default function TeamMembersPanel({ projectId, users, onUsersChanged, can
                 <div className="space-y-2">
                     {users.map((user) => (
                         <div key={user.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-accent/40 border border-transparent hover:border-border/50 transition-all group backdrop-blur-sm">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-sm group-hover:scale-105 transition-transform">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shrink-0 border border-primary/20 shadow-sm group-hover:scale-105 transition-transform" role="img" aria-label={(user.displayName || user.username || '?').charAt(0).toUpperCase()}>
                                 <span className="text-primary font-bold text-sm">
                                     {(user.displayName || user.username || '?').charAt(0).toUpperCase()}
                                 </span>
@@ -99,7 +100,7 @@ export default function TeamMembersPanel({ projectId, users, onUsersChanged, can
                             </div>
                             {canUpdateProject && (
                                 <button
-                                    onClick={() => handleRemoveUser(user.id)}
+                                    onClick={() => setUserToRemove(user)}
                                     disabled={isRemoving[user.id]}
                                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-40"
                                     title="Remove User"
@@ -111,6 +112,16 @@ export default function TeamMembersPanel({ projectId, users, onUsersChanged, can
                     ))}
                 </div>
             )}
+            <ConfirmModal
+                isOpen={!!userToRemove}
+                title="Remove team member?"
+                message={`Are you sure you want to remove "${userToRemove?.displayName || userToRemove?.username}" from this project? They will lose access to all project data.`}
+                confirmLabel="Remove"
+                variant="danger"
+                isLoading={!!(userToRemove && isRemoving[userToRemove.id])}
+                onConfirm={() => userToRemove && confirmAndRemoveUser(userToRemove.id)}
+                onCancel={() => setUserToRemove(null)}
+            />
         </section>
     );
 }

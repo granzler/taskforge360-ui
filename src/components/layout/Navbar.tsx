@@ -33,6 +33,7 @@ export default function Navbar() {
                         <CheckSquare size={20} strokeWidth={3} />
                     </div>
                     <span className="font-bold text-lg tracking-tight hidden md:inline-block">TaskForge360</span>
+                    <span className="font-bold text-lg tracking-tight md:hidden">TF</span>
                 </div>
 
                 <nav className="flex items-center gap-4 text-sm font-medium flex-1">
@@ -44,9 +45,10 @@ export default function Navbar() {
                             <Link
                                 key={link.href}
                                 href={link.href}
-                                className={`flex items-center gap-2 transition-colors hover:text-foreground/80 ${isActive ? 'text-foreground' : 'text-foreground/60'}`}
+                                aria-current={isActive ? 'page' : undefined}
+                                className={`flex items-center gap-2 transition-colors hover:text-foreground/80 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-4 rounded-md ${isActive ? 'text-foreground' : 'text-foreground/60'}`}
                             >
-                                <Icon size={16} />
+                                <Icon size={16} aria-hidden="true" />
                                 <span className="hidden lg:inline-block">{link.name}</span>
                             </Link>
                         );
@@ -56,11 +58,13 @@ export default function Navbar() {
                         <div className="relative">
                             <button
                                 onClick={() => setIsAdminOpen(!isAdminOpen)}
-                                className={`flex items-center gap-2 transition-colors hover:text-foreground/80 ${isAdminActive ? 'text-foreground' : 'text-foreground/60'}`}
+                                aria-expanded={isAdminOpen}
+                                aria-haspopup="menu"
+                                className={`flex items-center gap-2 transition-colors hover:text-foreground/80 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-4 rounded-md ${isAdminActive ? 'text-foreground' : 'text-foreground/60'}`}
                             >
-                                <Users size={16} />
+                                <Users size={16} aria-hidden="true" />
                                 <span className="hidden lg:inline-block">Admin</span>
-                                <ChevronDown size={14} className={`transition-transform ${isAdminOpen ? 'rotate-180' : ''}`} />
+                                <ChevronDown size={14} className={`transition-transform ${isAdminOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                             </button>
 
                             {isAdminOpen && (
@@ -68,13 +72,18 @@ export default function Navbar() {
                                     <div 
                                         className="fixed inset-0 z-40" 
                                         onClick={() => setIsAdminOpen(false)}
+                                        aria-hidden="true"
                                     />
-                                    <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border/60 rounded-xl shadow-lg z-50 overflow-hidden">
+                                    <div 
+                                        className="absolute top-full left-0 mt-2 w-48 bg-card border border-border/60 rounded-xl shadow-lg z-50 overflow-hidden"
+                                        role="menu"
+                                    >
                                         {canManageProjects && (
                                             <Link
                                                 href="/projects"
                                                 onClick={() => setIsAdminOpen(false)}
-                                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50 ${pathname === '/projects' || pathname.startsWith('/projects') ? 'bg-accent/30 text-primary' : 'text-foreground/80'}`}
+                                                role="menuitem"
+                                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-[-2px] ${pathname === '/projects' || pathname.startsWith('/projects') ? 'bg-accent/30 text-primary' : 'text-foreground/80'}`}
                                             >
                                                 <CheckSquare size={16} />
                                                 Projects
@@ -84,7 +93,8 @@ export default function Navbar() {
                                             <Link
                                                 href="/admin/labels"
                                                 onClick={() => setIsAdminOpen(false)}
-                                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50 ${pathname === '/admin/labels' || pathname.startsWith('/admin/labels') ? 'bg-accent/30 text-primary' : 'text-foreground/80'}`}
+                                                role="menuitem"
+                                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50 focus-visible:outline-2 focus-visible:outline-primary/50 focus-visible:outline-offset-[-2px] ${pathname === '/admin/labels' || pathname.startsWith('/admin/labels') ? 'bg-accent/30 text-primary' : 'text-foreground/80'}`}
                                             >
                                                 <Tag size={16} />
                                                 Labels

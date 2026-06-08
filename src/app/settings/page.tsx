@@ -21,7 +21,7 @@ export default function SettingsPage() {
     const logoutUrl = session?.logoutUrl;
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
             <h1 className="text-3xl font-bold tracking-tight mb-8">Settings</h1>
 
             <div className="space-y-6">
@@ -33,7 +33,7 @@ export default function SettingsPage() {
                     </h2>
                     <div className="space-y-4">
                         <div className="flex items-center gap-4 pb-4 border-b border-border/30">
-                            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
+                            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 shadow-sm" role="img" aria-label={user?.name || user?.email || 'User'}>
                                 <span className="text-primary font-bold text-2xl">
                                     {(user?.name || user?.email || '?').charAt(0).toUpperCase()}
                                 </span>
