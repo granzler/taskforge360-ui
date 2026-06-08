@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UpdateUserStoryRequestDto, UserStoryDto } from '@/domain/entities/UserStory';
 import { userStoryService } from '@/infrastructure/services/userStoryService';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 
 interface UseUpdateUserStoryOptions {
     onSuccess?: (story: UserStoryDto) => void;
@@ -20,17 +21,19 @@ export function useUpdateUserStory(options?: UseUpdateUserStoryOptions) {
 
         try {
             const result = await userStoryService.update(id, data);
-            if (result.success) {
-                toast.success(`User story "${result.data.title}" updated!`);
-                options?.onSuccess?.(result.data);
+            if (notifyResult(result, {
+                onSuccess: (story) => {
+                    toast.success(`User story "${story.title}" updated!`);
+                    options?.onSuccess?.(story);
+                },
+                onError: (msg) => {
+                    setError(msg);
+                    options?.onError?.(msg);
+                }
+            })) {
                 return true;
-            } else {
-                const errorMsg = result.errors.map(e => e.message).join(', ') || 'Could not update user story.';
-                setError(errorMsg);
-                toast.error(errorMsg);
-                options?.onError?.(errorMsg);
-                return false;
             }
+            return false;
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Could not update user story. Please try again.';
             console.error('Failed to update user story (exception):', err);

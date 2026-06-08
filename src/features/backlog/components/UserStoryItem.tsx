@@ -1,12 +1,16 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Target, User, Plus, Pencil } from 'lucide-react';
+import { useState, memo } from 'react';
+import { ChevronDown, ChevronRight, Target, User, Plus, Pencil, Loader2, Check, X } from 'lucide-react';
 import { Epic, SubTask } from '@/domain/entities/Project';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { UserStoryDto } from '@/domain/entities/UserStory';
+import { subtaskService } from '@/infrastructure/services/subtaskService';
 import { getEpicPriorityColor, getStatusIcon, getPriorityColor } from '@/lib/utils/colors';
 import { USER_STORY_STATUS_LABELS, UserStoryStatus, Status } from '@/domain/types';
 import { LabelBadge } from '@/features/labels/components/LabelBadge';
+import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 
 interface UserStoryItemProps {
     story: UserStoryDto;
@@ -15,9 +19,38 @@ interface UserStoryItemProps {
     onEdit?: (story: UserStoryDto) => void;
     subtasks: SubTask[];
     epic?: Epic | EpicResponseDto;
+    canUpdateStory?: boolean;
+    onSubtaskCreated?: (subtask: SubTask) => void;
 }
 
-export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, subtasks, epic }: UserStoryItemProps) {
+const UserStoryItem = memo(function UserStoryItem({ story, isExpanded, onToggle, onEdit, subtasks, epic, canUpdateStory = false, onSubtaskCreated }: UserStoryItemProps) {
+    const [showAddSubtask, setShowAddSubtask] = useState(false);
+    const [subtaskTitle, setSubtaskTitle] = useState('');
+    const [isCreatingSubtask, setIsCreatingSubtask] = useState(false);
+
+    const handleAddSubtask = async () => {
+        if (!subtaskTitle.trim()) return;
+
+        setIsCreatingSubtask(true);
+        try {
+            const result = await subtaskService.create({
+                title: subtaskTitle.trim(),
+                userStoryId: story.id,
+            });
+
+            if (notifyResult(result, { success: 'Subtask added!' })) {
+                setSubtaskTitle('');
+                setShowAddSubtask(false);
+                onSubtaskCreated?.(result.data);
+            }
+        } catch (err) {
+            console.error('Failed to create subtask:', err);
+            toast.error('Could not create subtask. Please try again.');
+        } finally {
+            setIsCreatingSubtask(false);
+        }
+    };
+
     return (
         <div className="mb-2 group">
             <div
@@ -80,10 +113,59 @@ export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, sub
                     ) : (
                         <div className="text-[10px] text-slate-500 italic py-1">No subtasks defined.</div>
                     )}
-                    <button className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1">
-                        <Plus size={10} /> Add Subtask
-                    </button>
-                    {isExpanded && onEdit && (
+
+                    {showAddSubtask ? (
+                        <div className="flex items-center gap-2 mt-1">
+                            <input
+                                type="text"
+                                value={subtaskTitle}
+                                onChange={e => setSubtaskTitle(e.target.value)}
+                                placeholder="Enter subtask title..."
+                                className="flex-1 px-3 py-1.5 text-xs border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50"
+                                autoFocus
+                                onKeyDown={e => {
+                                    if (isCreatingSubtask) return;
+                                    if (e.key === 'Enter') handleAddSubtask();
+                                    if (e.key === 'Escape') {
+                                        setShowAddSubtask(false);
+                                        setSubtaskTitle('');
+                                    }
+                                }}
+                                disabled={isCreatingSubtask}
+                            />
+                            <button
+                                onClick={handleAddSubtask}
+                                disabled={isCreatingSubtask || !subtaskTitle.trim()}
+                                className="p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-40"
+                            >
+                                {isCreatingSubtask ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowAddSubtask(false);
+                                    setSubtaskTitle('');
+                                }}
+                                disabled={isCreatingSubtask}
+                                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-accent rounded-lg transition-colors"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        canUpdateStory && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAddSubtask(true);
+                                }}
+                                className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1"
+                            >
+                                <Plus size={10} /> Add Subtask
+                            </button>
+                        )
+                    )}
+
+                    {onEdit && canUpdateStory && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -98,4 +180,7 @@ export default function UserStoryItem({ story, isExpanded, onToggle, onEdit, sub
             )}
         </div>
     );
-}
+});
+
+export type { UserStoryItemProps };
+export default UserStoryItem;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useCreateUserStory } from '../../../features/backlog/hooks/useCreateUserStory';
+import { useCreateUserStory } from '../useCreateUserStory';
 import { CreateUserStoryRequestDto, UserStoryDto } from '@/domain/entities/UserStory';
 
 vi.mock('@/infrastructure/services/userStoryService', () => ({
@@ -100,7 +100,7 @@ describe('useCreateUserStory', () => {
       expect(success).toBe(false);
     });
 
-    expect(mockToast.error).toHaveBeenCalledWith('Could not create user story. Please try again.');
+    expect(mockToast.error).toHaveBeenCalledWith('Network error');
   });
 
   it('should set loading state during create', async () => {

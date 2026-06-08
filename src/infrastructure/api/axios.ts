@@ -7,6 +7,7 @@ import { ApiErrorResponse } from '@/domain/types';
  * Normalizes backend error responses that might come in different casings
  * (e.g., PascalCase from .NET vs camelCase from our TypeScript definitions).
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const normalizeErrorResponse = (data: any): ApiErrorResponse => {
     if (!data) {
         return {
@@ -15,11 +16,28 @@ const normalizeErrorResponse = (data: any): ApiErrorResponse => {
         };
     }
 
-    const errors = (data.errors || data.Errors || []).map((e: any) => ({
-        code: e.code || e.Code || 'UNKNOWN_CODE',
-        message: e.message || e.Message || 'An unexpected error occurred',
-        type: e.type || e.Type || 'Error'
-    }));
+    const rawErrors = data.errors || data.Errors || [];
+
+    let errors: { code: string; message: string; type: string }[];
+
+    if (Array.isArray(rawErrors)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        errors = rawErrors.map((e: any) => ({
+            code: e.code || e.Code || 'UNKNOWN_CODE',
+            message: e.message || e.Message || 'An unexpected error occurred',
+            type: e.type || e.Type || 'Error'
+        }));
+    } else if (typeof rawErrors === 'object' && rawErrors !== null) {
+        errors = Object.entries(rawErrors).flatMap(([field, messages]) =>
+            (Array.isArray(messages) ? messages : [messages]).map((msg) => ({
+                code: 'VALIDATION_ERROR',
+                message: typeof msg === 'string' ? msg : `${field}: ${msg}`,
+                type: 'Validation'
+            }))
+        );
+    } else {
+        errors = [];
+    }
 
     // If no errors found but data has a message (fallback)
     if (errors.length === 0 && (data.message || data.Message)) {
@@ -67,6 +85,13 @@ api.interceptors.response.use(
                     import('react-hot-toast').then(({ toast }) => toast.error('Session expired. Please log in again.'));
                     await signOut({ callbackUrl: '/login?session_expired=true' });
                 }
+            } else if (status === 403) {
+                console.warn('API returned 403 Forbidden.');
+                if (typeof window !== 'undefined') {
+                    import('react-hot-toast').then(({ toast }) => toast.error('You do not have permission to perform this action.'));
+                }
+                const normalizedError = normalizeErrorResponse(data);
+                throw new ApiException(normalizedError);
             } else if ([400, 404, 409].includes(status) && data) {
                 // The Result pattern returns a structured error response
                 // We normalize it to handle PascalCase/camelCase differences

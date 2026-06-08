@@ -4,14 +4,22 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { GlobalLabelDto } from '@/domain/entities/GlobalLabel';
 import { globalLabelService } from '@/infrastructure/services/globalLabelService';
-import { Plus, Edit, Loader2, Search, Trash2, Tag } from 'lucide-react';
+import { Plus, Edit, Search, Trash2, Tag } from 'lucide-react';
+import { SkeletonList } from '@/components/ui';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function AdminLabelsPage() {
     const [labels, setLabels] = useState<GlobalLabelDto[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedLabels, setSelectedLabels] = useState<number[]>([]);
+    const { hasRole, hasScope } = usePermission();
+
+    const canCreate = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:create');
+    const canDelete = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:delete');
+    const canUpdate = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:update');
 
     useEffect(() => {
         fetchLabels();
@@ -20,11 +28,8 @@ export default function AdminLabelsPage() {
     const fetchLabels = async () => {
         try {
             const result = await globalLabelService.getAll();
-            if (result.success) {
+            if (notifyResult(result)) {
                 setLabels(result.data);
-            } else {
-                console.error('Failed to fetch labels:', result.errors);
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to load labels.');
             }
         } catch (err) {
             console.error('Failed to fetch labels (exception):', err);
@@ -90,13 +95,15 @@ export default function AdminLabelsPage() {
                         <p className="text-slate-500 mt-1 font-medium">Manage labels for user stories across all projects.</p>
                     </div>
                 </div>
-                <Link
-                    href="/admin/labels/create"
-                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold bg-primary text-primary-foreground rounded-xl shadow-md hover:bg-primary/90 transition-all active:scale-[0.98]"
-                >
-                    <Plus size={18} />
-                    Create Label
-                </Link>
+                {canCreate && (
+                    <Link
+                        href="/admin/labels/create"
+                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold bg-primary text-primary-foreground rounded-xl shadow-md hover:bg-primary/90 transition-all active:scale-[0.98]"
+                    >
+                        <Plus size={18} />
+                        Create Label
+                    </Link>
+                )}
             </div>
 
             <div className="bg-card border border-border/60 rounded-3xl shadow-sm overflow-hidden">
@@ -111,7 +118,7 @@ export default function AdminLabelsPage() {
                             className="w-full bg-accent/30 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all shadow-sm pl-10 pr-4 py-2.5 font-medium"
                         />
                     </div>
-                    {selectedLabels.length > 0 && (
+                    {selectedLabels.length > 0 && canDelete && (
                         <button
                             onClick={handleDelete}
                             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-all"
@@ -123,9 +130,7 @@ export default function AdminLabelsPage() {
                 </div>
 
                 {isLoading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 size={32} className="animate-spin text-slate-400" />
-                    </div>
+                    <SkeletonList rows={5} />
                 ) : filteredLabels.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                         <Tag size={48} className="mb-4 opacity-30" />
@@ -136,14 +141,16 @@ export default function AdminLabelsPage() {
                     <table className="w-full">
                         <thead>
                             <tr className="bg-accent/20 text-left text-xs font-bold text-slate-500 uppercase tracking-widest">
-                                <th className="px-4 py-3 w-12">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedLabels.length === filteredLabels.length && filteredLabels.length > 0}
-                                        onChange={toggleSelectAll}
-                                        className="rounded border-slate-300"
-                                    />
-                                </th>
+                                {canDelete && (
+                                    <th className="px-4 py-3 w-12">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedLabels.length === filteredLabels.length && filteredLabels.length > 0}
+                                            onChange={toggleSelectAll}
+                                            className="rounded border-slate-300"
+                                        />
+                                    </th>
+                                )}
                                 <th className="px-4 py-3">ID</th>
                                 <th className="px-4 py-3">Tag Name</th>
                                 <th className="px-4 py-3">Description</th>
@@ -153,14 +160,16 @@ export default function AdminLabelsPage() {
                         <tbody className="divide-y divide-border/50">
                             {filteredLabels.map((label) => (
                                 <tr key={label.id} className="hover:bg-accent/20 transition-colors">
-                                    <td className="px-4 py-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedLabels.includes(label.id)}
-                                            onChange={() => toggleSelect(label.id)}
-                                            className="rounded border-slate-300"
-                                        />
-                                    </td>
+                                    {canDelete && (
+                                        <td className="px-4 py-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedLabels.includes(label.id)}
+                                                onChange={() => toggleSelect(label.id)}
+                                                className="rounded border-slate-300"
+                                            />
+                                        </td>
+                                    )}
                                     <td className="px-4 py-3 text-sm font-mono text-slate-500">{label.id}</td>
                                     <td className="px-4 py-3">
                                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
@@ -169,13 +178,15 @@ export default function AdminLabelsPage() {
                                     </td>
                                     <td className="px-4 py-3 text-sm text-slate-600 max-w-md truncate">{label.description || '-'}</td>
                                     <td className="px-4 py-3 text-right">
-                                        <Link
-                                            href={`/admin/labels/${label.id}/edit`}
-                                            className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                                        >
-                                            <Edit size={14} />
-                                            Edit
-                                        </Link>
+                                        {canUpdate && (
+                                            <Link
+                                                href={`/admin/labels/${label.id}/edit`}
+                                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                                            >
+                                                <Edit size={14} />
+                                                Edit
+                                            </Link>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

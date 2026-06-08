@@ -7,14 +7,28 @@ import { ArrowLeft, Tag, Loader2, Save, X } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function CreateLabelPage() {
     const router = useRouter();
+    const { hasRole, hasScope } = usePermission();
+    const canCreate = hasRole('scrum-master') || hasRole('product-owner') || hasRole('system-admin') || hasScope('labels:create');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState<CreateLabelRequestDto>({
         tagName: '',
         description: '',
     });
+
+    if (!canCreate) {
+        return (
+            <div className="container mx-auto px-4 py-8 max-w-2xl">
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
+                    You do not have permission to create labels.
+                </div>
+            </div>
+        );
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,17 +45,14 @@ export default function CreateLabelPage() {
                 description: formData.description.trim(),
             });
 
-            if (result.success) {
+            if (notifyResult(result)) {
                 toast.success(`Label "${result.data.tagName}" created successfully!`);
                 router.push('/admin/labels');
-            } else {
-                const errorMessage = result.errors.map(e => e.message).join(', ');
-                toast.error(errorMessage || 'Failed to create label.');
-                setIsSubmitting(false);
             }
         } catch (err) {
             console.error('Failed to create label:', err);
             toast.error('Failed to create label. Please try again.');
+        } finally {
             setIsSubmitting(false);
         }
     };

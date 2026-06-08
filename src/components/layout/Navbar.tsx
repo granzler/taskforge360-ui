@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { LayoutDashboard, CheckSquare, Settings, List, Tag, ChevronDown, Users } from 'lucide-react';
 import UserInfo from '@/features/auth/components/UserInfo';
 import ProjectSelector from '@/features/projects/components/ProjectSelector';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 const navLinks = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -13,14 +14,14 @@ const navLinks = [
     { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-const adminLinks = [
-    { name: 'Projects', href: '/projects', icon: CheckSquare },
-    { name: 'Labels', href: '/admin/labels', icon: Tag },
-];
-
 export default function Navbar() {
     const pathname = usePathname();
     const [isAdminOpen, setIsAdminOpen] = useState(false);
+    const { hasRole, hasScope } = usePermission();
+
+    const canManageProjects = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:create');
+    const canManageLabels = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:create');
+    const showAdminDropdown = canManageProjects || canManageLabels;
 
     const isAdminActive = pathname.startsWith('/admin') || pathname.startsWith('/projects');
 
@@ -51,43 +52,49 @@ export default function Navbar() {
                         );
                     })}
 
-                    <div className="relative">
-                        <button
-                            onClick={() => setIsAdminOpen(!isAdminOpen)}
-                            className={`flex items-center gap-2 transition-colors hover:text-foreground/80 ${isAdminActive ? 'text-foreground' : 'text-foreground/60'}`}
-                        >
-                            <Users size={16} />
-                            <span className="hidden lg:inline-block">Admin</span>
-                            <ChevronDown size={14} className={`transition-transform ${isAdminOpen ? 'rotate-180' : ''}`} />
-                        </button>
+                    {showAdminDropdown && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setIsAdminOpen(!isAdminOpen)}
+                                className={`flex items-center gap-2 transition-colors hover:text-foreground/80 ${isAdminActive ? 'text-foreground' : 'text-foreground/60'}`}
+                            >
+                                <Users size={16} />
+                                <span className="hidden lg:inline-block">Admin</span>
+                                <ChevronDown size={14} className={`transition-transform ${isAdminOpen ? 'rotate-180' : ''}`} />
+                            </button>
 
-                        {isAdminOpen && (
-                            <>
-                                <div 
-                                    className="fixed inset-0 z-40" 
-                                    onClick={() => setIsAdminOpen(false)}
-                                />
-                                <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border/60 rounded-xl shadow-lg z-50 overflow-hidden">
-                                    {adminLinks.map((link) => {
-                                        const Icon = link.icon;
-                                        const isActive = pathname === link.href || pathname.startsWith(link.href);
-
-                                        return (
+                            {isAdminOpen && (
+                                <>
+                                    <div 
+                                        className="fixed inset-0 z-40" 
+                                        onClick={() => setIsAdminOpen(false)}
+                                    />
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border/60 rounded-xl shadow-lg z-50 overflow-hidden">
+                                        {canManageProjects && (
                                             <Link
-                                                key={link.href}
-                                                href={link.href}
+                                                href="/projects"
                                                 onClick={() => setIsAdminOpen(false)}
-                                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50 ${isActive ? 'bg-accent/30 text-primary' : 'text-foreground/80'}`}
+                                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50 ${pathname === '/projects' || pathname.startsWith('/projects') ? 'bg-accent/30 text-primary' : 'text-foreground/80'}`}
                                             >
-                                                <Icon size={16} />
-                                                {link.name}
+                                                <CheckSquare size={16} />
+                                                Projects
                                             </Link>
-                                        );
-                                    })}
-                                </div>
-                            </>
-                        )}
-                    </div>
+                                        )}
+                                        {canManageLabels && (
+                                            <Link
+                                                href="/admin/labels"
+                                                onClick={() => setIsAdminOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/50 ${pathname === '/admin/labels' || pathname.startsWith('/admin/labels') ? 'bg-accent/30 text-primary' : 'text-foreground/80'}`}
+                                            >
+                                                <Tag size={16} />
+                                                Labels
+                                            </Link>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </nav>
 
                 <div className="flex items-center gap-3">

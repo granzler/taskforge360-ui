@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, Loader2 } from 'lucide-react';
-import { sprintService, CreateSprintDto } from '@/infrastructure/services/sprintService';
-import { Sprint } from '@/domain/entities/Sprint';
+import { sprintService } from '@/infrastructure/services/sprintService';
+import { Sprint, CreateSprintDto } from '@/domain/entities/Sprint';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 
 interface CreateSprintModalProps {
     projectId: number;
@@ -57,11 +58,8 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
 
         try {
             const result = await sprintService.create(dto);
-            if (result.success) {
+            if (notifyResult(result)) {
                 onCreated(result.data);
-            } else {
-                console.error('Failed to create sprint:', result.errors);
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Could not create the sprint.');
             }
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'Could not create the sprint. Please try again.';

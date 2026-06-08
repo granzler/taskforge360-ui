@@ -1,14 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2 } from 'lucide-react';
+import { useState, memo } from 'react';
+import {
+    DndContext,
+    DragOverlay,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragStartEvent,
+    DragEndEvent,
+    useDroppable,
+    useDraggable,
+} from '@dnd-kit/core';
+import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2, GripVertical } from 'lucide-react';
 import { SubTask, Epic } from '@/domain/entities/Project';
 import { UserStoryDto } from '@/domain/entities/UserStory';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { Sprint } from '@/domain/entities/Sprint';
+import { userStoryService } from '@/infrastructure/services/userStoryService';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { toast } from 'react-hot-toast';
-import UserStoryItem from './UserStoryItem';
+import { notifyResult } from '@/lib/utils/notify';
+import UserStoryItem, { type UserStoryItemProps } from './UserStoryItem';
 import CreateUserStoryModal from './CreateUserStoryModal';
 import EditUserStoryModal from './EditUserStoryModal';
 
@@ -29,31 +43,83 @@ interface SprintsTabProps {
     onSprintDeleted: (sprintId: number) => void;
     onStoryCreated: (storyId: number) => void;
     onStoryUpdated?: (story: UserStoryDto) => void;
+    canDeleteSprint?: boolean;
+    canCreateStory?: boolean;
+    canUpdateStory?: boolean;
 }
 
-export default function SprintsTab({ 
-    projectId, 
-    projectName, 
-    sprints, 
-    userStories, 
-    subtasks, 
-    epics, 
+function DraggableStory({ story, ...rest }: { story: UserStoryDto } & Pick<UserStoryItemProps, 'isExpanded' | 'onToggle' | 'onEdit' | 'subtasks' | 'epic' | 'canUpdateStory'>) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+        id: `story-${story.id}`,
+        data: { story },
+    });
+
+    const style = transform ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        opacity: isDragging ? 0.4 : 1,
+    } : undefined;
+
+    return (
+        <div ref={setNodeRef} style={style} className="relative group">
+            <button
+                {...listeners}
+                {...attributes}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-400 hover:text-primary cursor-grab active:cursor-grabbing z-10"
+                tabIndex={-1}
+            >
+                <GripVertical size={14} />
+            </button>
+            <div className="pl-0">
+                <UserStoryItem story={story} {...rest} />
+            </div>
+        </div>
+    );
+}
+
+function DroppableZone({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) {
+    const { setNodeRef, isOver } = useDroppable({ id });
+
+    return (
+        <div
+            ref={setNodeRef}
+            className={`transition-colors ${isOver ? 'bg-primary/5 border-primary/30' : ''} ${className || ''}`}
+        >
+            {children}
+        </div>
+    );
+}
+
+const SprintsTab = memo(function SprintsTab({
+    projectId,
+    projectName,
+    sprints,
+    userStories,
+    subtasks,
+    epics,
     onSprintDeleted,
     onStoryCreated,
     onStoryUpdated,
+    canDeleteSprint = false,
+    canCreateStory = false,
+    canUpdateStory = false,
 }: SprintsTabProps) {
     const [expandedSprints, setExpandedSprints] = useState<number[]>([1, 2]);
     const [expandedStories, setExpandedStories] = useState<number[]>([]);
-    
-    // Deletion states
+    const [activeDragStory, setActiveDragStory] = useState<UserStoryDto | null>(null);
+
     const [menuOpenSprintId, setMenuOpenSprintId] = useState<number | null>(null);
     const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // Modal states
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [createModalSprintId, setCreateModalSprintId] = useState<number | undefined>(undefined);
     const [editingStory, setEditingStory] = useState<UserStoryDto | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 5 },
+        })
+    );
 
     const toggleSprint = (id: number) => {
         setExpandedSprints(prev =>
@@ -95,18 +161,66 @@ export default function SprintsTab({
         }
     };
 
+    const handleDragStart = (event: DragStartEvent) => {
+        const story = event.active.data.current?.story as UserStoryDto;
+        if (story) setActiveDragStory(story);
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        setActiveDragStory(null);
+        const { active, over } = event;
+        if (!over || !active) return;
+
+        const story = active.data.current?.story as UserStoryDto;
+        if (!story) return;
+
+        const targetId = over.id as string;
+        let newSprintId: number | undefined;
+
+        if (targetId === 'backlog-zone') {
+            newSprintId = undefined;
+        } else if (targetId.startsWith('sprint-')) {
+            newSprintId = parseInt(targetId.replace('sprint-', ''), 10);
+        } else {
+            return;
+        }
+
+        if (newSprintId === story.sprintId) return;
+
+        try {
+            const result = await userStoryService.update(story.id, {
+                title: story.title,
+                description: story.description,
+                statusId: story.statusId,
+                priority: story.priority,
+                projectId: story.projectId,
+                storyPoints: story.storyPoints,
+                acceptanceCriteria: story.acceptanceCriteria,
+                sprintId: newSprintId,
+                epicId: story.epicId,
+                assignedTo: story.assignedTo,
+                labelIds: story.labels?.map(l => l.id),
+                concurrencyVersion: story.concurrencyVersion,
+            });
+
+            if (notifyResult(result, { success: `Story moved to ${newSprintId ? sprints.find(s => s.id === newSprintId)?.name || 'sprint' : 'backlog'}!` })) {
+                onStoryUpdated?.(result.data);
+            }
+        } catch (err) {
+            console.error('Failed to move story:', err);
+            toast.error('Failed to move story.');
+        }
+    };
+
     const handleDeleteSprint = async () => {
         if (!sprintToDelete) return;
 
         setIsDeleting(true);
         try {
             const result = await sprintService.delete(sprintToDelete.id);
-            if (result.success) {
-                toast.success(`Sprint "${sprintToDelete.name}" deleted successfully.`);
+            if (notifyResult(result, { success: `Sprint "${sprintToDelete.name}" deleted successfully.` })) {
                 onSprintDeleted(sprintToDelete.id);
                 setSprintToDelete(null);
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to delete sprint.');
             }
         } catch (err) {
             console.error('Failed to delete sprint:', err);
@@ -117,144 +231,166 @@ export default function SprintsTab({
     };
 
     return (
-        <div className="space-y-6">
-            {storiesBySprint.map(sprint => (
-                <div key={sprint.id} className="rounded-xl border border-border bg-card/50 shadow-sm relative transition-all">
-                    <div
-                        className={`bg-accent/30 p-4 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors ${expandedSprints.includes(sprint.id) ? 'rounded-t-xl' : 'rounded-xl'}`}
-                        onClick={() => toggleSprint(sprint.id)}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="text-slate-400">
-                                {expandedSprints.includes(sprint.id) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="space-y-6">
+                {storiesBySprint.map(sprint => (
+                    <div key={sprint.id} className="rounded-xl border border-border bg-card/50 shadow-sm relative transition-all">
+                        <div
+                            className={`bg-accent/30 p-4 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors ${expandedSprints.includes(sprint.id) ? 'rounded-t-xl' : 'rounded-xl'}`}
+                            onClick={() => toggleSprint(sprint.id)}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="text-slate-400">
+                                    {expandedSprints.includes(sprint.id) ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-base flex items-center gap-3">
+                                        {sprint.name}
+                                        <span className={`text-[10px] ${getStatusColor(sprint.status.name)} text-white px-2 py-0.5 rounded-full uppercase tracking-widest`}>
+                                            {sprint.status.name}
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-slate-500">{sprint.startDate} — {sprint.endDate}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-bold text-base flex items-center gap-3">
-                                    {sprint.name}
-                                    <span className={`text-[10px] ${getStatusColor(sprint.status.name)} text-white px-2 py-0.5 rounded-full uppercase tracking-widest`}>
-                                        {sprint.status.name}
-                                    </span>
-                                </h3>
-                                <p className="text-xs text-slate-500">{sprint.startDate} — {sprint.endDate}</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-6">
-                            <div className="text-right">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">{sprint.totalStoryPoints} pts</p>
-                                <p className="text-[10px] text-muted-foreground">{sprint.stories.length} stories</p>
-                            </div>
-                            <div className="relative">
-                                <button 
-                                    className="p-2 hover:bg-background/80 rounded-full text-slate-400 transition-colors" 
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        setMenuOpenSprintId(menuOpenSprintId === sprint.id ? null : sprint.id);
-                                    }}
-                                >
-                                    <MoreVertical size={16} />
-                                </button>
-                                
-                                {menuOpenSprintId === sprint.id && (
-                                    <>
-                                        <div 
-                                            className="fixed inset-0 z-10" 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setMenuOpenSprintId(null);
-                                            }} 
-                                        />
-                                        <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-xl shadow-lg z-20 overflow-hidden text-sm py-1 animate-in fade-in zoom-in-95 duration-100">
-                                            <button
-                                                className="w-full text-left px-4 py-2 hover:bg-accent hover:text-red-500 transition-colors flex items-center gap-2 text-red-600 dark:text-red-400"
+                            <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold">{sprint.totalStoryPoints} pts</p>
+                                    <p className="text-[10px] text-muted-foreground">{sprint.stories.length} stories</p>
+                                </div>
+                                <div className="relative">
+                                    <button
+                                        className="p-2 hover:bg-background/80 rounded-full text-slate-400 transition-colors"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setMenuOpenSprintId(menuOpenSprintId === sprint.id ? null : sprint.id);
+                                        }}
+                                    >
+                                        <MoreVertical size={16} />
+                                    </button>
+
+                                    {menuOpenSprintId === sprint.id && (
+                                        <>
+                                            <div
+                                                className="fixed inset-0 z-10"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setMenuOpenSprintId(null);
-                                                    setSprintToDelete(sprint);
                                                 }}
-                                            >
-                                                <Trash2 size={14} /> Delete Sprint
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
+                                            />
+                                            <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-xl shadow-lg z-20 overflow-hidden text-sm py-1 animate-in fade-in zoom-in-95 duration-100">
+                                                {canDeleteSprint && (
+                                                    <button
+                                                        className="w-full text-left px-4 py-2 hover:bg-accent hover:text-red-500 transition-colors flex items-center gap-2 text-red-600 dark:text-red-400"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setMenuOpenSprintId(null);
+                                                            setSprintToDelete(sprint);
+                                                        }}
+                                                    >
+                                                        <Trash2 size={14} /> Delete Sprint
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {expandedSprints.includes(sprint.id) && (
-                        <div className="p-4 border-t border-border bg-background/20 rounded-b-xl">
-                            {sprint.stories.length > 0 ? (
-                                sprint.stories.map((story, idx) => (
-                                    <UserStoryItem
-                                        key={`${story.id}-${idx}`}
-                                        story={story}
-                                        isExpanded={expandedStories.includes(story.id)}
-                                        onToggle={toggleStory}
-                                        onEdit={(story) => setEditingStory(story)}
-                                        subtasks={subtasks.filter(st => st.userStoryId === story.id)}
-                                        epic={epics.find(e => e.id === story.epicId)}
-                                    />
-                                ))
-                            ) : (
-                                <div className="text-center py-8 text-slate-500 border-2 border-dashed border-border rounded-lg text-sm">
-                                    No stories in this sprint. Drag here to add.
-                                </div>
+                        {expandedSprints.includes(sprint.id) && (
+                            <DroppableZone id={`sprint-${sprint.id}`} className="p-4 border-t border-border bg-background/20 rounded-b-xl min-h-[100px]">
+                                {sprint.stories.length > 0 ? (
+                                    sprint.stories.map((story, idx) => (
+                                        <DraggableStory
+                                            key={`${story.id}-${idx}`}
+                                            story={story}
+                                            isExpanded={expandedStories.includes(story.id)}
+                                            onToggle={toggleStory}
+                                            onEdit={(story: UserStoryDto) => setEditingStory(story)}
+                                            subtasks={subtasks.filter(st => st.userStoryId === story.id)}
+                                            epic={epics.find(e => e.id === story.epicId)}
+                                            canUpdateStory={canUpdateStory}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8 text-slate-500 border-2 border-dashed border-border rounded-lg text-sm">
+                                        No stories in this sprint. Drag here to add.
+                                    </div>
+                                )}
+                                {canCreateStory && (
+                                    <button
+                                        className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-xs font-medium text-slate-500 hover:bg-accent/5 hover:text-primary transition-all"
+                                        onClick={() => {
+                                            setCreateModalSprintId(sprint.id);
+                                            setShowCreateModal(true);
+                                        }}
+                                    >
+                                        <Plus size={14} /> Add User Story
+                                    </button>
+                                )}
+                            </DroppableZone>
+                        )}
+                    </div>
+                ))}
+
+                {/* Backlog / Unassigned Stories */}
+                <div className="relative pt-4">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div className="w-full border-t border-border"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                        <span className="bg-background px-3 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                            Backlog / Unassigned
+                            {unassignedStories.length > 0 && (
+                                <span className="ml-2 text-muted-foreground font-normal">
+                                    ({unassignedStoryPoints} pts)
+                                </span>
                             )}
-                            <button 
-                                className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-xs font-medium text-slate-500 hover:bg-accent/5 hover:text-primary transition-all"
-                                onClick={() => {
-                                    setCreateModalSprintId(sprint.id);
-                                    setShowCreateModal(true);
-                                }}
-                            >
-                                <Plus size={14} /> Add User Story
-                            </button>
+                        </span>
+                    </div>
+                </div>
+
+                <DroppableZone id="backlog-zone" className="p-4 rounded-xl border border-border bg-background shadow-sm min-h-[100px]">
+                    {unassignedStories.length > 0 ? (
+                        unassignedStories.map((story, idx) => (
+                            <DraggableStory
+                                key={`unassigned-${story.id}-${idx}`}
+                                story={story}
+                                isExpanded={expandedStories.includes(story.id)}
+                                onToggle={toggleStory}
+                                onEdit={(story: UserStoryDto) => setEditingStory(story)}
+                                subtasks={subtasks.filter(st => st.userStoryId === story.id)}
+                                epic={epics.find(e => e.id === story.epicId)}
+                                canUpdateStory={canUpdateStory}
+                            />
+                        ))
+                    ) : (
+                        <div className="text-center py-6 text-slate-500 text-sm italic">
+                            No unassigned items in backlog.
                         </div>
                     )}
-                </div>
-            ))}
-
-            {/* Backlog / Unassigned Stories */}
-            <div className="relative pt-4">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center">
-                    <span className="bg-background px-3 text-xs font-bold text-slate-500 uppercase tracking-widest">
-                        Backlog / Unassigned
-                        {unassignedStories.length > 0 && (
-                            <span className="ml-2 text-muted-foreground font-normal">
-                                ({unassignedStoryPoints} pts)
-                            </span>
-                        )}
-                    </span>
-                </div>
+                </DroppableZone>
             </div>
 
-            <div className="p-4 rounded-xl border border-border bg-background shadow-sm">
-                {unassignedStories.length > 0 ? (
-                    unassignedStories.map((story, idx) => (
-                        <UserStoryItem
-                            key={`unassigned-${story.id}-${idx}`}
-                            story={story}
-                            isExpanded={expandedStories.includes(story.id)}
-                            onToggle={toggleStory}
-                            onEdit={(story) => setEditingStory(story)}
-                            subtasks={subtasks.filter(st => st.userStoryId === story.id)}
-                            epic={epics.find(e => e.id === story.epicId)}
-                        />
-                    ))
-                ) : (
-                    <div className="text-center py-6 text-slate-500 text-sm italic">
-                        No unassigned items in backlog.
+            {/* Drag Overlay */}
+            <DragOverlay>
+                {activeDragStory ? (
+                    <div className="p-3 bg-background border border-primary/30 rounded-xl shadow-xl opacity-90">
+                        <p className="font-bold text-sm">{activeDragStory.title}</p>
                     </div>
-                )}
-            </div>
+                ) : null}
+            </DragOverlay>
 
             {/* Delete Confirmation Modal */}
             {sprintToDelete && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-                    <div className="w-full max-w-sm bg-background border border-border rounded-xl shadow-2xl p-6  animate-in zoom-in-95 duration-200">
+                    <div className="w-full max-w-sm bg-background border border-border rounded-xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center gap-3 text-red-500 mb-4">
                             <div className="p-2 rounded-full bg-red-100 dark:bg-red-500/20">
                                 <Trash2 size={24} />
@@ -319,6 +455,8 @@ export default function SprintsTab({
                     epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
                 />
             )}
-        </div>
+        </DndContext>
     );
-}
+});
+
+export default SprintsTab;

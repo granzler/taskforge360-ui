@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CreateUserStoryRequestDto, UserStoryDto } from '@/domain/entities/UserStory';
 import { userStoryService } from '@/infrastructure/services/userStoryService';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 
 interface UseCreateUserStoryOptions {
     onSuccess?: (story: UserStoryDto) => void;
@@ -20,19 +21,21 @@ export function useCreateUserStory(options?: UseCreateUserStoryOptions) {
 
         try {
             const result = await userStoryService.create(data);
-            if (result.success) {
-                toast.success(`User story "${result.data.title}" created!`);
-                options?.onSuccess?.(result.data);
+            if (notifyResult(result, {
+                onSuccess: (story) => {
+                    toast.success(`User story "${story.title}" created!`);
+                    options?.onSuccess?.(story);
+                },
+                onError: (msg) => {
+                    setError(msg);
+                    options?.onError?.(msg);
+                }
+            })) {
                 return true;
-            } else {
-                const errorMsg = result.errors.map(e => e.message).join(', ') || 'Could not create user story.';
-                setError(errorMsg);
-                toast.error(errorMsg);
-                options?.onError?.(errorMsg);
-                return false;
             }
+            return false;
         } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Could create user story. Please try again.';
+            const errorMsg = err instanceof Error ? err.message : 'Could not create user story. Please try again.';
             console.error('Failed to create user story (exception):', err);
             setError(errorMsg);
             toast.error(errorMsg);

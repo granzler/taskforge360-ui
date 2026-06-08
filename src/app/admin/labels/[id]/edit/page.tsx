@@ -7,6 +7,8 @@ import { GlobalLabelDto, UpdateLabelRequestDto } from '@/domain/entities/GlobalL
 import { globalLabelService } from '@/infrastructure/services/globalLabelService';
 import { ArrowLeft, Tag, Loader2, Save, X, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -16,6 +18,9 @@ export default function EditLabelPage({ params }: PageProps) {
     const { id } = use(params);
     const labelId = parseInt(id);
     const router = useRouter();
+    const { hasRole, hasScope } = usePermission();
+    const canUpdate = hasRole('scrum-master') || hasRole('product-owner') || hasRole('system-admin') || hasScope('labels:update');
+    const canDelete = hasRole('scrum-master') || hasRole('product-owner') || hasRole('system-admin') || hasScope('labels:delete');
 
     const [label, setLabel] = useState<GlobalLabelDto | null>(null);
     const [formData, setFormData] = useState<UpdateLabelRequestDto | null>(null);
@@ -70,17 +75,14 @@ export default function EditLabelPage({ params }: PageProps) {
                 concurrencyVersion: formData.concurrencyVersion,
             });
 
-            if (result.success) {
+            if (notifyResult(result)) {
                 toast.success(`Label "${result.data.tagName}" updated successfully!`);
                 router.push('/admin/labels');
-            } else {
-                const errorMessage = result.errors.map(e => e.message).join(', ');
-                toast.error(errorMessage || 'Failed to update label.');
-                setIsSaving(false);
             }
         } catch (err) {
             console.error('Failed to update label:', err);
             toast.error('Failed to update label. Please try again.');
+        } finally {
             setIsSaving(false);
         }
     };
@@ -90,15 +92,11 @@ export default function EditLabelPage({ params }: PageProps) {
 
         try {
             const result = await globalLabelService.delete(labelId);
-            if (result.success) {
-                toast.success('Label deleted successfully!');
+            if (notifyResult(result, { success: 'Label deleted successfully!' })) {
                 router.push('/admin/labels');
-            } else {
-                toast.error(result.errors.map(e => e.message).join(', ') || 'Failed to delete label.');
             }
         } catch (err) {
             console.error('Failed to delete label:', err);
-            toast.error('Failed to delete label.');
         }
     };
 
@@ -196,14 +194,16 @@ export default function EditLabelPage({ params }: PageProps) {
                 </div>
 
                 <div className="pt-6 mt-6 border-t border-border/50 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 relative z-10">
-                    <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-all"
-                    >
-                        <Trash2 size={16} />
-                        Delete
-                    </button>
+                    {canDelete && (
+                        <button
+                            type="button"
+                            onClick={handleDelete}
+                            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold text-red-600 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-all"
+                        >
+                            <Trash2 size={16} />
+                            Delete
+                        </button>
+                    )}
                     <div className="flex gap-4">
                         <button
                             type="button"
@@ -213,18 +213,20 @@ export default function EditLabelPage({ params }: PageProps) {
                             <X size={16} />
                             Cancel
                         </button>
-                        <button
-                            type="submit"
-                            disabled={isSaving}
-                            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold bg-primary text-primary-foreground rounded-xl shadow-md hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                            {isSaving ? (
-                                <Loader2 size={18} className="animate-spin" />
-                            ) : (
-                                <Save size={18} />
-                            )}
-                            Save Changes
-                        </button>
+                        {canUpdate && (
+                            <button
+                                type="submit"
+                                disabled={isSaving}
+                                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold bg-primary text-primary-foreground rounded-xl shadow-md hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                {isSaving ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                    <Save size={18} />
+                                )}
+                                Save Changes
+                            </button>
+                        )}
                     </div>
                 </div>
             </form>

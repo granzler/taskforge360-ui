@@ -9,7 +9,9 @@ import { UserSearchResult } from '@/domain/entities/User';
 import { Loader2, ArrowLeft, Edit3 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 import { useProject } from '@/features/projects/context/ProjectContext';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -22,18 +24,24 @@ export default function EditProjectPage({ params }: PageProps) {
 
     const router = useRouter();
     const { refreshProjects } = useProject();
+    const { hasRole, hasScope } = usePermission();
+    const canUpdate = hasRole('product-owner') || hasRole('system-admin') || hasScope('projects:update');
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        if (!canUpdate) {
+            toast.error('You do not have permission to edit this project.');
+            router.push('/projects');
+            return;
+        }
+
         const fetchProject = async () => {
             try {
                 const result = await projectService.getById(projectId);
-                if (result.success) {
+                if (notifyResult(result)) {
                     setProject(result.data);
                 } else {
-                    console.error('Failed to fetch project:', result.errors);
-                    toast.error('Failed to load project details.');
                     router.push('/projects');
                 }
             } catch (error) {
@@ -48,17 +56,15 @@ export default function EditProjectPage({ params }: PageProps) {
         if (projectId) {
             fetchProject();
         }
-    }, [projectId, router]);
+    }, [projectId, router, canUpdate]);
 
     const handleUpdate = async (data: CreateProjectDto | UpdateProjectDto, users?: UserSearchResult[]) => {
         if (!projectId) return;
 
         // 1. Update project details
         const updateResult = await projectService.update(projectId, data as UpdateProjectDto);
-        if (!updateResult.success) {
-             const errorMessage = updateResult.errors.map(e => e.message).join(', ') || 'Failed to update project.';
-             toast.error(errorMessage);
-             throw new Error(errorMessage);
+        if (!notifyResult(updateResult)) {
+            throw new Error(updateResult.errors.map(e => e.message).join(', ') || 'Failed to update project.');
         }
 
         // 2. Handle user assignments if users are provided
@@ -76,8 +82,6 @@ export default function EditProjectPage({ params }: PageProps) {
                     await projectService.assignUsers(projectId, toAdd.map(u => u.id), project.concurrencyVersion);
                 }
                 
-                // Handle removals
-                // (Note: if removeUser also needs concurrencyVersion, it should be added here)
                 await Promise.all(toRemove.map(u => projectService.removeUser(projectId, u.userId)));
                 
                 await refreshProjects();

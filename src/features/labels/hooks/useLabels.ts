@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { GlobalLabelDto } from '@/domain/entities/GlobalLabel';
 import { globalLabelService } from '@/infrastructure/services/globalLabelService';
 
@@ -16,38 +16,22 @@ interface UseLabelsReturn {
 export function useLabels(options: UseLabelsOptions = {}): UseLabelsReturn {
     const { autoFetch = true } = options;
 
-    const [labels, setLabels] = useState<GlobalLabelDto[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchLabels = useCallback(async () => {
-        setIsLoading(true);
-        setError(null);
-
-        try {
+    const { data, isLoading, error, refetch } = useQuery<GlobalLabelDto[], Error>({
+        queryKey: ['labels'],
+        queryFn: async () => {
             const result = await globalLabelService.getAll();
-            if (result.success) {
-                setLabels(result.data);
-            } else {
-                setError(result.errors.map(e => e.message).join(', '));
+            if (!result.success) {
+                throw new Error(result.errors.map(e => e.message).join(', '));
             }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to fetch labels');
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (autoFetch) {
-            fetchLabels();
-        }
-    }, [autoFetch, fetchLabels]);
+            return result.data;
+        },
+        enabled: autoFetch,
+    });
 
     return {
-        labels,
+        labels: data ?? [],
         isLoading,
-        error,
-        refetch: fetchLabels,
+        error: error?.message ?? null,
+        refetch: async () => { await refetch(); },
     };
 }

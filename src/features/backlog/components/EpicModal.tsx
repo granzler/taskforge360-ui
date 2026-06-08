@@ -6,6 +6,7 @@ import { epicService, CreateEpicDto, UpdateEpicDto } from '@/infrastructure/serv
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { EPIC_STATUS_OPTIONS, getWorkItemPriorityLabel } from '@/domain/types';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
 
 interface EpicModalProps {
     mode: 'create' | 'edit';
@@ -71,11 +72,8 @@ export default function EpicModal({ mode, epic, projectId, projectName, onClose,
                 };
 
                 const result = await epicService.update(epic.id, dto);
-                if (result.success) {
+                if (notifyResult(result)) {
                     onUpdated(result.data);
-                } else {
-                    console.error('Failed to update epic:', result.errors);
-                    toast.error(result.errors.map(e => e.message).join(', ') || 'Could not update the epic.');
                 }
             } else {
                 const dto: CreateEpicDto = {
@@ -88,11 +86,8 @@ export default function EpicModal({ mode, epic, projectId, projectName, onClose,
                 };
 
                 const result = await epicService.create(dto);
-                if (result.success) {
+                if (notifyResult(result)) {
                     onCreated(result.data);
-                } else {
-                    console.error('Failed to create epic:', result.errors);
-                    toast.error(result.errors.map(e => e.message).join(', ') || 'Could not create the epic.');
                 }
             }
         } catch (err) {

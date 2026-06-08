@@ -1,178 +1,91 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     mockSubTasks
 } from '@/features/backlog/data/mockBacklogData';
 import { Sprint } from '@/domain/entities/Sprint';
-import { sprintService } from '@/infrastructure/services/sprintService';
-import { epicService } from '@/infrastructure/services/epicService';
-import { userStoryService } from '@/infrastructure/services/userStoryService';
 import { UserStoryDto } from '@/domain/entities/UserStory';
 import { EpicResponseDto } from '@/domain/entities/Epic';
+import { userStoryService } from '@/infrastructure/services/userStoryService';
 import { useProject } from '@/features/projects/context/ProjectContext';
-import { Layers, Calendar, Plus, FolderOpen, Loader2 } from 'lucide-react';
+import { useSprints } from '@/features/backlog/hooks/useSprints';
+import { useEpicsByProject } from '@/features/backlog/hooks/useEpicsByProject';
+import { useBacklogStories } from '@/features/backlog/hooks/useBacklogStories';
+import { Layers, Calendar, Plus, FolderOpen } from 'lucide-react';
+import { SkeletonCard } from '@/components/ui';
 import SprintsTab from '@/features/backlog/components/SprintsTab';
 import EpicsTab from '@/features/backlog/components/EpicsTab';
 import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
 import CreateUserStoryModal from '@/features/backlog/components/CreateUserStoryModal';
 import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
+import { notifyResult } from '@/lib/utils/notify';
+import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function BacklogPage() {
+    const queryClient = useQueryClient();
+    const { hasRole, hasScope } = usePermission();
     const [activeTab, setActiveTab] = useState<'sprints' | 'epics'>('sprints');
     const { selectedProject } = useProject();
+    const projectId = selectedProject?.id;
+
+    const canCreateSprint = hasRole('scrum-master') || hasRole('system-admin') || hasScope('sprints:create');
+    const canDeleteSprint = hasRole('scrum-master') || hasRole('system-admin') || hasScope('sprints:delete');
+    const canCreateStory = hasRole('developer') || hasRole('product-owner') || hasRole('system-admin') || hasScope('userstories:create');
+    const canUpdateStory = hasRole('developer') || hasRole('product-owner') || hasRole('system-admin') || hasScope('userstories:update');
+    const canCreateEpic = hasRole('product-owner') || hasRole('system-admin') || hasScope('epics:create');
+    const canUpdateEpic = hasRole('product-owner') || hasRole('system-admin') || hasScope('epics:update');
+
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreateEpicModal, setShowCreateEpicModal] = useState(false);
     const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
     const [editingEpic, setEditingEpic] = useState<EpicResponseDto | null>(null);
 
-    const [sprints, setSprints] = useState<Sprint[]>([]);
-    const [isLoadingSprints, setIsLoadingSprints] = useState(false);
+    const { data: sprints = [], isLoading: isLoadingSprints } = useSprints(projectId);
+    const { data: epics = [], isLoading: isLoadingEpics } = useEpicsByProject(projectId);
+    const { data: userStories = [], isLoading: isLoadingStories } = useBacklogStories(
+        projectId,
+        sprints.map(s => s.id)
+    );
 
-    const [epics, setEpics] = useState<EpicResponseDto[]>([]);
-    const [isLoadingEpics, setIsLoadingEpics] = useState(false);
+    const invalidateAll = () => {
+        queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['epics', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['backlog-stories', projectId] });
+    };
 
-    const [userStories, setUserStories] = useState<UserStoryDto[]>([]);
-    const [isLoadingStories, setIsLoadingStories] = useState(false);
-
-    const [loadError, setLoadError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (loadError) {
-            toast.error(loadError);
-        }
-    }, [loadError]);
-
-    useEffect(() => {
-        if (!selectedProject) {
-            setSprints([]);
-            setEpics([]);
-            return;
-        }
-
-        setLoadError(null);
-
-        const fetchAll = async () => {
-            setIsLoadingSprints(true);
-            setIsLoadingEpics(true);
-            setIsLoadingStories(true);
-
-            let sprintsResult: typeof sprints = [];
-            let epicsResult: typeof epics = [];
-            let allStories: UserStoryDto[] = [];
-            let hasError = false;
-
-            try {
-                const result = await sprintService.getByProject(selectedProject.id);
-                if (result.success) {
-                    sprintsResult = result.data;
-                } else {
-                    toast.error(result.errors?.map(e => e.message).join(', ') || 'Failed to fetch sprints.');
-                    hasError = true;
-                }
-            } catch (err) {
-                console.error('Failed to fetch sprints:', err);
-                toast.error('Failed to fetch sprints. Please try again.');
-                hasError = true;
-            } finally {
-                setIsLoadingSprints(false);
-            }
-
-            try {
-                const result = await epicService.getByProject(selectedProject.id);
-                if (result.success) {
-                    epicsResult = result.data;
-                } else {
-                    toast.error(result.errors?.map(e => e.message).join(', ') || 'Failed to fetch epics.');
-                    hasError = true;
-                }
-            } catch (err) {
-                console.error('Failed to fetch epics:', err);
-                toast.error('Failed to fetch epics. Please try again.');
-                hasError = true;
-            } finally {
-                setIsLoadingEpics(false);
-            }
-            
-            try {
-                const backlogResult = await userStoryService.getBacklog(selectedProject.id);
-                if (backlogResult.success) {
-                    allStories = [...backlogResult.data];
-                } else {
-                    toast.error(backlogResult.errors?.map(e => e.message).join(', ') || 'Failed to fetch backlog stories.');
-                    hasError = true;
-                }
-                
-                // Fetch stories for all sprints
-                for (const sprint of sprintsResult) {
-                    const sprintStoriesResult = await userStoryService.getBySprint(sprint.id);
-                    if (sprintStoriesResult.success) {
-                        allStories = [...allStories, ...sprintStoriesResult.data];
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to fetch user stories:', err);
-                hasError = true;
-            } finally {
-                setIsLoadingStories(false);
-            }
-
-            setSprints(sprintsResult);
-            setEpics(epicsResult);
-            setUserStories(allStories);
-
-            if (hasError) {
-                setLoadError('Some data could not be loaded. Please refresh to try again.');
-            }
-        };
-
-        fetchAll();
-    }, [selectedProject]);
-
-    const handleSprintCreated = (sprint: Sprint) => {
-        setSprints(prev => [...prev, sprint]);
+    const handleSprintCreated = (_sprint: Sprint) => {
         setShowCreateModal(false);
-        toast.success(`Sprint "${sprint.name}" created!`);
+        invalidateAll();
+        toast.success(`Sprint created!`);
     };
 
-    const handleSprintDeleted = (sprintId: number) => {
-        setSprints(prev => prev.filter(s => s.id !== sprintId));
+    const handleSprintDeleted = (_sprintId: number) => {
+        invalidateAll();
     };
 
-    const handleStoryCreated = async (storyId?: number) => {
-        if (!storyId) return;
-        try {
-            const result = await userStoryService.getById(storyId);
-            if (result.success && result.data) {
-                setUserStories(prev => [...prev, result.data]);
-                toast.success('User story created!');
-            }
-        } catch (err) {
-            console.error('Failed to refresh story:', err);
-        }
+    const handleStoryCreated = (storyId?: number) => {
+        if (storyId) invalidateAll();
         setShowCreateStoryModal(false);
     };
 
-    const handleStoryUpdated = async (updatedStory: UserStoryDto) => {
-        setUserStories(prev => prev.map(s => s.id === updatedStory.id ? updatedStory : s));
+    const handleStoryUpdated = async (_updatedStory: UserStoryDto) => {
+        invalidateAll();
         toast.success('User story updated!');
     };
 
-    const handleEpicCreated = (epic: EpicResponseDto) => {
-        setEpics(prev => [...prev, epic]);
+    const handleEpicCreated = (_epic: EpicResponseDto) => {
         setShowCreateEpicModal(false);
-        toast.success(`Epic "${epic.title}" created!`);
+        invalidateAll();
+        toast.success('Epic created!');
     };
 
-    const handleEpicUpdated = (updatedEpic: EpicResponseDto) => {
-        setEpics(prev => prev.map(e => e.id === updatedEpic.id ? updatedEpic : e));
+    const handleEpicUpdated = (_updatedEpic: EpicResponseDto) => {
         setEditingEpic(null);
-        toast.success(`Epic "${updatedEpic.title}" updated!`);
-    };
-
-    const handleEditEpic = (epic: EpicResponseDto) => {
-        setEditingEpic(epic);
+        invalidateAll();
+        toast.success('Epic updated!');
     };
 
     const handleLinkStory = async (epicId: number, storyId: number): Promise<boolean> => {
@@ -197,20 +110,19 @@ export default function BacklogPage() {
                 labelIds: currentStory.labels?.map(l => l.id),
                 concurrencyVersion: currentStory.concurrencyVersion,
             });
-            
-            if (result.success) {
-                setUserStories(prev => prev.map(s => s.id === storyId ? result.data : s));
-                toast.success('Story linked to epic!');
+
+            if (notifyResult(result, { success: 'Story linked to epic!' })) {
+                invalidateAll();
                 return true;
             }
-            toast.error('Failed to link story');
             return false;
         } catch (err) {
             console.error('Failed to link story:', err);
-            toast.error('Failed to link story');
             return false;
         }
     };
+
+    const isLoading = isLoadingSprints || isLoadingEpics || isLoadingStories;
 
     const renderSprintsContent = () => {
         if (!selectedProject) {
@@ -227,11 +139,12 @@ export default function BacklogPage() {
             );
         }
 
-        if (isLoadingSprints || isLoadingEpics || isLoadingStories) {
+        if (isLoading) {
             return (
-                <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
-                    <Loader2 size={20} className="animate-spin" />
-                    <span className="text-sm">Loading data for <strong>{selectedProject.name}</strong>…</span>
+                <div className="space-y-4">
+                    <SkeletonCard />
+                    <SkeletonCard />
+                    <SkeletonCard />
                 </div>
             );
         }
@@ -247,6 +160,9 @@ export default function BacklogPage() {
                 onSprintDeleted={handleSprintDeleted}
                 onStoryCreated={handleStoryCreated}
                 onStoryUpdated={handleStoryUpdated}
+                canDeleteSprint={canDeleteSprint}
+                canCreateStory={canCreateStory}
+                canUpdateStory={canUpdateStory}
             />
         );
     };
@@ -254,7 +170,6 @@ export default function BacklogPage() {
     return (
         <>
             <div className="container mx-auto px-4 py-8 max-w-6xl">
-                {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">
@@ -267,26 +182,29 @@ export default function BacklogPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => setShowCreateModal(true)}
-                            disabled={!selectedProject}
-                            className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <Calendar size={16} />
-                            Plan Sprint
-                        </button>
-                        <button
-                            onClick={() => setShowCreateStoryModal(true)}
-                            disabled={!selectedProject}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                            <Plus size={18} />
-                            Create Story
-                        </button>
+                        {canCreateSprint && (
+                            <button
+                                onClick={() => setShowCreateModal(true)}
+                                disabled={!selectedProject}
+                                className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-accent/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <Calendar size={16} />
+                                Plan Sprint
+                            </button>
+                        )}
+                        {canCreateStory && (
+                            <button
+                                onClick={() => setShowCreateStoryModal(true)}
+                                disabled={!selectedProject}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                                <Plus size={18} />
+                                Create Story
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Tabs */}
                 <div className="flex items-center gap-1 p-1 bg-slate-200/50 dark:bg-slate-800/50 rounded-xl w-fit mb-8 border border-border">
                     <button
                         onClick={() => setActiveTab('sprints')}
@@ -310,25 +228,25 @@ export default function BacklogPage() {
                     </button>
                 </div>
 
-                {/* Content Area */}
                 <div className="min-h-[400px]">
                     {activeTab === 'sprints' ? renderSprintsContent() : (
                         isLoadingEpics ? (
-                            <div className="flex items-center justify-center gap-3 py-20 text-muted-foreground">
-                                <Loader2 size={20} className="animate-spin" />
-                                <span className="text-sm">Loading epics...</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <SkeletonCard />
+                                <SkeletonCard />
+                                <SkeletonCard />
                             </div>
                         ) : (
-                            <>
-                                {loadError && <div className="mb-4 p-3 text-sm text-red-500 bg-red-100 dark:bg-red-500/20 rounded-lg">{loadError}</div>}
-                                <EpicsTab
-                                    epics={epics}
-                                    userStories={userStories}
-                                    onCreateEpic={() => setShowCreateEpicModal(true)}
-                                    onEditEpic={handleEditEpic}
-                                    onLinkStory={handleLinkStory}
-                                />
-                            </>
+                            <EpicsTab
+                                epics={epics}
+                                userStories={userStories}
+                                onCreateEpic={() => setShowCreateEpicModal(true)}
+                                onEditEpic={setEditingEpic}
+                                onLinkStory={handleLinkStory}
+                                canCreateEpic={canCreateEpic}
+                                canUpdateEpic={canUpdateEpic}
+                                canLinkStory={canUpdateStory}
+                            />
                         )
                     )}
                 </div>
@@ -357,7 +275,6 @@ export default function BacklogPage() {
                 `}</style>
             </div>
 
-            {/* Create Sprint Modal */}
             {showCreateModal && selectedProject && (
                 <CreateSprintModal
                     projectId={selectedProject.id}
@@ -368,7 +285,6 @@ export default function BacklogPage() {
                 />
             )}
 
-            {/* Create Epic Modal */}
             {showCreateEpicModal && selectedProject && (
                 <EpicModal
                     mode="create"
@@ -380,7 +296,6 @@ export default function BacklogPage() {
                 />
             )}
 
-            {/* Edit Epic Modal */}
             {editingEpic && (
                 <EpicModal
                     mode="edit"
@@ -393,7 +308,6 @@ export default function BacklogPage() {
                 />
             )}
 
-            {/* Create User Story Modal */}
             {showCreateStoryModal && selectedProject && (
                 <CreateUserStoryModal
                     projectId={selectedProject.id}
