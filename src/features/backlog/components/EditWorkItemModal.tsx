@@ -2,32 +2,33 @@
 
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useUpdateUserStory } from '../hooks/useUpdateUserStory';
-import { UserStoryDto, UpdateUserStoryRequestDto } from '@/domain/entities/UserStory';
+import { useUpdateWorkItem } from '../hooks/useUpdateWorkItem';
+import { WorkItemDto, UpdateWorkItemRequestDto } from '@/domain/entities/WorkItem';
 import { Sprint } from '@/domain/entities/Sprint';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import UserStoryForm from './UserStoryForm';
+import { WORK_ITEM_TYPE_LABELS, WorkItemType } from '@/domain/types';
+import WorkItemForm from './WorkItemForm';
 
-interface EditUserStoryModalProps {
-    story: UserStoryDto;
+interface EditWorkItemModalProps {
+    workItem: WorkItemDto;
     isOpen: boolean;
     onClose: () => void;
-    onUpdated: (story: UserStoryDto) => void;
+    onUpdated: (workItem: WorkItemDto) => void;
     sprints?: Sprint[];
     epics?: EpicResponseDto[];
 }
 
-export default function EditUserStoryModal({
-    story,
+export default function EditWorkItemModal({
+    workItem,
     isOpen,
     onClose,
     onUpdated,
     sprints = [],
     epics = [],
-}: EditUserStoryModalProps) {
-    const { update, isLoading } = useUpdateUserStory({
-        onSuccess: (updatedStory) => {
-            onUpdated(updatedStory);
+}: EditWorkItemModalProps) {
+    const { update, isLoading } = useUpdateWorkItem({
+        onSuccess: (updatedWorkItem) => {
+            onUpdated(updatedWorkItem);
             onClose();
         },
     });
@@ -50,29 +51,31 @@ export default function EditUserStoryModal({
         statusId: number;
         acceptanceCriteria?: string;
         sprintId?: number;
-        epicId?: number;
+        parentId?: number;
+        type: WorkItemType;
         projectId: number;
         priority: number;
         assignedTo?: string;
         labelIds?: number[];
     }) => {
-        const dto: UpdateUserStoryRequestDto = {
+        const dto: UpdateWorkItemRequestDto = {
             title: data.title,
             description: data.description,
             storyPoints: data.storyPoints,
             statusId: data.statusId,
             acceptanceCriteria: data.acceptanceCriteria,
-            sprintId: data.sprintId,
-            epicId: data.epicId,
+            sprintId: data.type === WorkItemType.Task ? undefined : data.sprintId,
             projectId: data.projectId,
             priority: data.priority,
             assignedTo: data.assignedTo,
             labelIds: data.labelIds,
-            concurrencyVersion: story.concurrencyVersion,
+            concurrencyVersion: workItem.concurrencyVersion,
         };
 
-        await update(story.id, dto);
+        await update(workItem.id, dto);
     };
+
+    const typeLabel = WORK_ITEM_TYPE_LABELS[workItem.type as WorkItemType] || 'Work Item';
 
     return (
         <>
@@ -88,8 +91,8 @@ export default function EditUserStoryModal({
                 >
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                         <div>
-                            <h2 className="text-base font-bold">Edit User Story</h2>
-                            <p className="text-xs text-muted-foreground mt-0.5">{story.title}</p>
+                            <h2 className="text-base font-bold">Edit {typeLabel}</h2>
+                            <p className="text-xs text-muted-foreground mt-0.5">{workItem.title}</p>
                         </div>
                         <button
                             onClick={onClose}
@@ -100,23 +103,26 @@ export default function EditUserStoryModal({
                     </div>
 
                     <div className="px-6 py-5">
-                        <UserStoryForm
+                        <WorkItemForm
                             initialData={{
-                                title: story.title,
-                                description: story.description,
-                                storyPoints: story.storyPoints,
-                                statusId: story.statusId,
-                                acceptanceCriteria: story.acceptanceCriteria,
-                                sprintId: story.sprintId,
-                                epicId: story.epicId,
-                                assignedTo: story.assignedTo,
-                                labelIds: story.labels?.map(l => l.id),
+                                title: workItem.title,
+                                description: workItem.description,
+                                storyPoints: workItem.storyPoints,
+                                statusId: workItem.statusId,
+                                acceptanceCriteria: workItem.acceptanceCriteria,
+                                sprintId: workItem.sprintId,
+                                parentId: workItem.parentId,
+                                type: workItem.type as WorkItemType,
+                                assignedTo: workItem.assignedTo,
+                                labelIds: workItem.labels?.map(l => l.id),
                             }}
-                            projectId={story.projectId}
+                            projectId={workItem.projectId}
                             sprints={sprints}
                             epics={epics}
-                            isSprintReadOnly={!!story.sprintId}
+                            isSprintReadOnly={!!workItem.sprintId}
                             isLoading={isLoading}
+                            showTypeSelector={true}
+                            defaultType={workItem.type as WorkItemType}
                             onSubmit={handleSubmit}
                             onCancel={onClose}
                             submitLabel="Save Changes"

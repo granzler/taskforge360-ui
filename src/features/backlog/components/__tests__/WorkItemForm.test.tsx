@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import UserStoryForm from '../UserStoryForm';
+import WorkItemForm from '../WorkItemForm';
 
 vi.mock('@/infrastructure/services/projectService', () => ({
   projectService: {
@@ -27,13 +27,15 @@ vi.mock('../UserStoryAssigneeSelector', () => ({
   ),
 }));
 
-describe('UserStoryForm', () => {
+describe('WorkItemForm', () => {
   const defaultProps = {
     projectId: 1,
     isLoading: false,
     onSubmit: vi.fn(),
     onCancel: vi.fn(),
     submitLabel: 'Submit',
+    showTypeSelector: false,
+    defaultType: 1 as const, // Story
   };
 
   beforeEach(() => {
@@ -41,17 +43,23 @@ describe('UserStoryForm', () => {
   });
 
   it('should render form with all fields', () => {
-    render(<UserStoryForm {...defaultProps} />);
+    render(<WorkItemForm {...defaultProps} />);
 
     expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/story points/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/status/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/sprint/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/epic/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/epic \/ parent/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/acceptance criteria/i)).toBeInTheDocument();
     expect(screen.getByTestId('assignee-selector')).toBeInTheDocument();
     expect(screen.getByTestId('label-selector')).toBeInTheDocument();
+  });
+
+  it('should render type selector when showTypeSelector is true', () => {
+    render(<WorkItemForm {...defaultProps} showTypeSelector={true} />);
+
+    expect(screen.getByLabelText(/type/i)).toBeInTheDocument();
   });
 
   it('should pre-fill form with initial data', () => {
@@ -62,10 +70,10 @@ describe('UserStoryForm', () => {
       statusId: 2,
       acceptanceCriteria: 'AC 1',
       sprintId: 1,
-      epicId: 2,
+      parentId: 2,
     };
 
-    render(<UserStoryForm {...defaultProps} initialData={initialData} />);
+    render(<WorkItemForm {...defaultProps} initialData={initialData} />);
 
     expect(screen.getByDisplayValue('Initial Title')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Initial Description')).toBeInTheDocument();
@@ -74,17 +82,17 @@ describe('UserStoryForm', () => {
   });
 
   it('should validate title is required', () => {
-    render(<UserStoryForm {...defaultProps} />);
+    render(<WorkItemForm {...defaultProps} />);
 
     const submitButton = screen.getByRole('button', { name: 'Submit' });
     expect(submitButton).toBeDisabled();
   });
 
   it('should enable submit when title is filled', async () => {
-    render(<UserStoryForm {...defaultProps} />);
+    render(<WorkItemForm {...defaultProps} />);
 
     const titleInput = screen.getByLabelText(/title/i);
-    await userEvent.type(titleInput, 'New Story');
+    await userEvent.type(titleInput, 'New Item');
 
     const submitButton = screen.getByRole('button', { name: 'Submit' });
     expect(submitButton).not.toBeDisabled();
@@ -93,10 +101,10 @@ describe('UserStoryForm', () => {
   it('should call onSubmit with form data', async () => {
     const onSubmit = vi.fn();
 
-    render(<UserStoryForm {...defaultProps} onSubmit={onSubmit} />);
+    render(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
 
     const titleInput = screen.getByLabelText(/title/i);
-    await userEvent.type(titleInput, 'New Story');
+    await userEvent.type(titleInput, 'New Item');
 
     const submitButton = screen.getByRole('button', { name: 'Submit' });
     await userEvent.click(submitButton);
@@ -104,9 +112,10 @@ describe('UserStoryForm', () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'New Story',
+          title: 'New Item',
           projectId: 1,
           priority: 2,
+          type: 1,
         })
       );
     });
@@ -115,7 +124,7 @@ describe('UserStoryForm', () => {
   it('should call onCancel when cancel clicked', async () => {
     const onCancel = vi.fn();
 
-    render(<UserStoryForm {...defaultProps} onCancel={onCancel} />);
+    render(<WorkItemForm {...defaultProps} onCancel={onCancel} />);
 
     const cancelButton = screen.getByRole('button', { name: 'Cancel' });
     await userEvent.click(cancelButton);
@@ -124,7 +133,7 @@ describe('UserStoryForm', () => {
   });
 
   it('should show loading state', () => {
-    render(<UserStoryForm {...defaultProps} isLoading={true} submitLabel="Saving..." />);
+    render(<WorkItemForm {...defaultProps} isLoading={true} submitLabel="Saving..." />);
 
     expect(screen.getByText('Saving...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
@@ -133,7 +142,7 @@ describe('UserStoryForm', () => {
   it('should show read-only sprint when isSprintReadOnly', () => {
     const sprints = [{ id: 1, name: 'Sprint 1', status: { name: 'Active' } }] as never[];
     render(
-      <UserStoryForm
+      <WorkItemForm
         {...defaultProps}
         isSprintReadOnly={true}
         initialData={{ title: 'Test', statusId: 1, sprintId: 1 }}
@@ -147,10 +156,10 @@ describe('UserStoryForm', () => {
   it('should include labelIds in submit data when labels are selected', async () => {
     const onSubmit = vi.fn();
 
-    render(<UserStoryForm {...defaultProps} onSubmit={onSubmit} />);
+    render(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
 
     const titleInput = screen.getByLabelText(/title/i);
-    await userEvent.type(titleInput, 'Test Story');
+    await userEvent.type(titleInput, 'Test Item');
 
     const labelButton = screen.getByRole('button', { name: 'Add Labels' });
     await userEvent.click(labelButton);
@@ -170,10 +179,10 @@ describe('UserStoryForm', () => {
   it('should include assignedTo field in submit data', async () => {
     const onSubmit = vi.fn();
 
-    render(<UserStoryForm {...defaultProps} onSubmit={onSubmit} />);
+    render(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
 
     const titleInput = screen.getByLabelText(/title/i);
-    await userEvent.type(titleInput, 'Test Story');
+    await userEvent.type(titleInput, 'Test Item');
 
     const submitButton = screen.getByRole('button', { name: 'Submit' });
     await userEvent.click(submitButton);

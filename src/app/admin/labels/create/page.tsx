@@ -12,8 +12,8 @@ import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function CreateLabelPage() {
     const router = useRouter();
-    const { hasRole, hasScope } = usePermission();
-    const canCreate = hasRole('scrum-master') || hasRole('product-owner') || hasRole('system-admin') || hasScope('labels:create');
+    const { hasScope } = usePermission();
+    const canCreate = hasScope('labels:create');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState<CreateLabelRequestDto>({
         tagName: '',

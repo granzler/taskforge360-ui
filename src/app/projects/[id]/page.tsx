@@ -22,8 +22,8 @@ export default function ProjectDetailsPage({ params }: PageProps) {
     const projectId = parseInt(id);
 
     const { refreshProjects } = useProject();
-    const { hasRole, hasScope } = usePermission();
-    const canUpdateProject = hasRole('product-owner') || hasRole('system-admin') || hasScope('projects:update');
+    const { hasScope } = usePermission();
+    const canUpdateProject = hasScope('projects:update');
     const [project, setProject] = useState<Project | null>(null);
     const [users, setUsers] = useState<UserSearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);

@@ -1,23 +1,4 @@
-export interface SubTaskDto {
-    id: number;
-    title: string;
-    description: string;
-    userStoryId: number;
-    concurrencyVersion: number;
-}
-
-export interface UserStoryDto {
-    id: number;
-    title: string;
-    description: string;
-    epicId: number;
-    subTasks: SubTaskDto[];
-    storyPoints: number;
-    acceptanceCriteria: string;
-    statusId?: number;
-    statusName?: string;
-    priority?: number | string;
-}
+import { WorkItemDto } from './WorkItem';
 
 export interface EpicResponseDto {
     id: number;
@@ -27,7 +8,7 @@ export interface EpicResponseDto {
     statusId: number;
     statusName: string;
     projectId: number;
-    userStories: UserStoryDto[];
+    children: WorkItemDto[];            // Renamed from userStories
     priority?: number | string;
     concurrencyVersion: number;
 }

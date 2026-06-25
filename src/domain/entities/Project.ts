@@ -12,6 +12,7 @@ export interface ProjectUser {
 export interface WorkItem {
     id: number;
     title: string;
+    type?: string;            // "Story", "Bug", "Spike", "Task"
 }
 
 export interface Project {
@@ -57,8 +58,7 @@ export interface Epic {
     concurrencyVersion: number;
 }
 
-
-
+/** @deprecated Use WorkItem (type: Task) instead. Kept for backward compat during migration. */
 export interface SubTask {
     id: number;
     title: string;
@@ -67,7 +67,7 @@ export interface SubTask {
     status: Status;
     startDate?: string;
     endDate?: string;
-    userStoryId: number;
+    parentId: number;           // renamed from userStoryId
     assigneeId?: string;
     concurrencyVersion: number;
 }

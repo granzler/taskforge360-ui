@@ -141,9 +141,8 @@ body {
   to { transform: rotate(360deg); }
 }
 
-.motion-safe .animate-spin-slow,
 @media (prefers-reduced-motion: no-preference) {
-  .animate-spin-slow {
+  .motion-safe .animate-spin-slow {
     animation: spin-slow 3s linear infinite;
   }
 }

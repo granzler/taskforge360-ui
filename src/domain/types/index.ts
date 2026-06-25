@@ -22,6 +22,29 @@ export const getWorkItemPriorityLabel = (priority: number | string | undefined):
 
 export type Status = 'To Do' | 'In Progress' | 'Review' | 'Done';
 
+// ─── WorkItemType Enum ──────────────────────────────────────────
+export enum WorkItemType {
+    Story = 1,
+    Task = 2,
+    Bug = 3,
+    Spike = 4,
+}
+
+export const WORK_ITEM_TYPE_LABELS: Record<WorkItemType, string> = {
+    [WorkItemType.Story]: 'Story',
+    [WorkItemType.Task]: 'Task',
+    [WorkItemType.Bug]: 'Bug',
+    [WorkItemType.Spike]: 'Spike',
+};
+
+export const WORK_ITEM_TYPE_OPTIONS = [
+    { id: WorkItemType.Story, label: 'Story' },
+    { id: WorkItemType.Task, label: 'Task' },
+    { id: WorkItemType.Bug, label: 'Bug' },
+    { id: WorkItemType.Spike, label: 'Spike' },
+];
+
+// ─── Epic Status ────────────────────────────────────────────────
 export enum EpicStatus {
     Backlog = 1,
     InProgress = 2,
@@ -46,31 +69,49 @@ export const EPIC_STATUS_OPTIONS = [
     { id: EpicStatus.Cancelled, label: 'Cancelled' },
 ];
 
-export enum UserStoryStatus {
+// ─── WorkItem Status (shared by Story, Bug, Spike, Task) ────────
+export enum WorkItemStatus {
     Backlog = 6,
     ToDo = 7,
     InProgress = 8,
-    ReadyForReview = 9,
-    InReview = 10,
-    NeedsRevision = 11,
-    ReadyForTest = 12,
-    InTest = 13,
+    InReview = 9,
+    Testing = 10,
+    Deploying = 11,
+    ReadyForTesting = 12,
+    // ID 13 (Refinement) — REMOVED by backend
     Done = 14,
-    Blocked = 15
+    // ID 15 (Cancelled) — REMOVED by backend
 }
 
-export const USER_STORY_STATUS_LABELS: Record<UserStoryStatus, string> = {
-    [UserStoryStatus.Backlog]: 'Backlog',
-    [UserStoryStatus.ToDo]: 'To Do',
-    [UserStoryStatus.InProgress]: 'In Progress',
-    [UserStoryStatus.ReadyForReview]: 'Ready for Review',
-    [UserStoryStatus.InReview]: 'In Review',
-    [UserStoryStatus.NeedsRevision]: 'Needs Revision',
-    [UserStoryStatus.ReadyForTest]: 'Ready for Test',
-    [UserStoryStatus.InTest]: 'In Test',
-    [UserStoryStatus.Done]: 'Done',
-    [UserStoryStatus.Blocked]: 'Blocked',
+export const WORK_ITEM_STATUS_LABELS: Record<WorkItemStatus, string> = {
+    [WorkItemStatus.Backlog]: 'Backlog',
+    [WorkItemStatus.ToDo]: 'To Do',
+    [WorkItemStatus.InProgress]: 'In Progress',
+    [WorkItemStatus.InReview]: 'In Review',
+    [WorkItemStatus.Testing]: 'Testing',
+    [WorkItemStatus.Deploying]: 'Deploying',
+    [WorkItemStatus.ReadyForTesting]: 'Ready for Testing',
+    [WorkItemStatus.Done]: 'Done',
 };
+
+export const WORK_ITEM_STATUS_OPTIONS = [
+    { id: WorkItemStatus.Backlog, label: 'Backlog' },
+    { id: WorkItemStatus.ToDo, label: 'To Do' },
+    { id: WorkItemStatus.InProgress, label: 'In Progress' },
+    { id: WorkItemStatus.InReview, label: 'In Review' },
+    { id: WorkItemStatus.Testing, label: 'Testing' },
+    { id: WorkItemStatus.Deploying, label: 'Deploying' },
+    { id: WorkItemStatus.ReadyForTesting, label: 'Ready for Testing' },
+    { id: WorkItemStatus.Done, label: 'Done' },
+];
+
+// ─── Backward-compat aliases ────────────────────────────────────
+/** @deprecated Use WorkItemStatus instead */
+export const UserStoryStatus = WorkItemStatus;
+/** @deprecated Use WORK_ITEM_STATUS_LABELS instead */
+export const USER_STORY_STATUS_LABELS = WORK_ITEM_STATUS_LABELS;
+
+// ─── API Types ──────────────────────────────────────────────────
 export interface ApiError {
   code: string;
   message: string;

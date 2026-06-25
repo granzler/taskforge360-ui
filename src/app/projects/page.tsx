@@ -18,11 +18,11 @@ export default function ProjectsPage() {
     const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const { refreshProjects } = useProject();
-    const { hasRole, hasScope } = usePermission();
+    const { hasScope } = usePermission();
 
-    const canCreate = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:create');
-    const canDelete = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:delete');
-    const canUpdate = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:update');
+    const canCreate = hasScope('projects:create');
+    const canDelete = hasScope('projects:delete');
+    const canUpdate = hasScope('projects:update');
 
     useEffect(() => {
         fetchProjects();

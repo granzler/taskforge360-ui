@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useCreateUserStory } from '../useCreateUserStory';
-import { CreateUserStoryRequestDto, UserStoryDto } from '@/domain/entities/UserStory';
+import { useCreateWorkItem } from '../useCreateWorkItem';
+import { CreateWorkItemRequestDto, WorkItemDto } from '@/domain/entities/WorkItem';
 
-vi.mock('@/infrastructure/services/userStoryService', () => ({
-  userStoryService: {
+vi.mock('@/infrastructure/services/workItemService', () => ({
+  workItemService: {
     create: vi.fn(),
   },
 }));
@@ -16,20 +16,21 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
-import { userStoryService } from '@/infrastructure/services/userStoryService';
+import { workItemService } from '@/infrastructure/services/workItemService';
 import { toast } from 'react-hot-toast';
 
-const mockUserStoryService = userStoryService as ReturnType<typeof vi.mocked<typeof userStoryService>>;
+const mockService = workItemService as ReturnType<typeof vi.mocked<typeof workItemService>>;
 const mockToast = toast as ReturnType<typeof vi.mocked<typeof toast>>;
 
-describe('useCreateUserStory', () => {
+describe('useCreateWorkItem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should create user story successfully', async () => {
-    const mockStory: UserStoryDto = {
+  it('should create work item successfully', async () => {
+    const mockItem: WorkItemDto = {
       id: 1,
+      type: 1, // Story
       title: 'New Story',
       statusId: 1,
       statusName: 'Backlog',
@@ -38,47 +39,53 @@ describe('useCreateUserStory', () => {
       concurrencyVersion: 1,
     };
 
-    mockUserStoryService.create.mockResolvedValue({
+    mockService.create.mockResolvedValue({
       success: true,
-      data: mockStory,
+      data: mockItem,
     });
 
-    const { result } = renderHook(() => useCreateUserStory());
+    const { result } = renderHook(() => useCreateWorkItem());
 
     await act(async () => {
       const success = await result.current.create({
+        type: 1,
         title: 'New Story',
         statusId: 1,
         priority: 2,
         projectId: 1,
-      } as CreateUserStoryRequestDto);
+        concurrencyVersion: 1,
+      } as CreateWorkItemRequestDto);
       expect(success).toBe(true);
     });
 
-    expect(mockUserStoryService.create).toHaveBeenCalledWith({
+    expect(mockService.create).toHaveBeenCalledWith({
+      type: 1,
       title: 'New Story',
       statusId: 1,
       priority: 2,
       projectId: 1,
+      concurrencyVersion: 1,
     });
-    expect(mockToast.success).toHaveBeenCalledWith('User story "New Story" created!');
+    expect(mockToast.success).toHaveBeenCalledWith('Story "New Story" created!');
   });
 
   it('should handle create failure', async () => {
-    mockUserStoryService.create.mockResolvedValue({
+    mockService.create.mockResolvedValue({
       success: false,
       errors: [{ code: 'VALIDATION_ERROR', message: 'Title required', type: 'Validation' }],
     });
 
-    const { result } = renderHook(() => useCreateUserStory());
+    const { result } = renderHook(() => useCreateWorkItem());
 
     await act(async () => {
       const success = await result.current.create({
+        type: 1,
         title: '',
         statusId: 1,
         priority: 2,
         projectId: 1,
-      } as CreateUserStoryRequestDto);
+        concurrencyVersion: 1,
+      } as CreateWorkItemRequestDto);
       expect(success).toBe(false);
     });
 
@@ -86,17 +93,19 @@ describe('useCreateUserStory', () => {
   });
 
   it('should handle exception', async () => {
-    mockUserStoryService.create.mockRejectedValue(new Error('Network error'));
+    mockService.create.mockRejectedValue(new Error('Network error'));
 
-    const { result } = renderHook(() => useCreateUserStory());
+    const { result } = renderHook(() => useCreateWorkItem());
 
     await act(async () => {
       const success = await result.current.create({
+        type: 1,
         title: 'Test',
         statusId: 1,
         priority: 2,
         projectId: 1,
-      } as CreateUserStoryRequestDto);
+        concurrencyVersion: 1,
+      } as CreateWorkItemRequestDto);
       expect(success).toBe(false);
     });
 
@@ -109,34 +118,37 @@ describe('useCreateUserStory', () => {
       resolvePromise = resolve;
     });
 
-    mockUserStoryService.create.mockReturnValue(promise as never);
+    mockService.create.mockReturnValue(promise as never);
 
-    const { result } = renderHook(() => useCreateUserStory());
+    const { result } = renderHook(() => useCreateWorkItem());
 
     expect(result.current.isLoading).toBe(false);
 
     act(() => {
       result.current.create({
+        type: 1,
         title: 'Test',
         statusId: 1,
         priority: 2,
         projectId: 1,
-      } as CreateUserStoryRequestDto);
+        concurrencyVersion: 1,
+      } as CreateWorkItemRequestDto);
     });
 
     expect(result.current.isLoading).toBe(true);
 
     await act(async () => {
-      resolvePromise!({ success: true, data: { id: 1, title: 'Test', statusId: 1, priority: 2, projectId: 1, concurrencyVersion: 1 } });
+      resolvePromise!({ success: true, data: { id: 1, type: 1, title: 'Test', statusId: 1, priority: 2, projectId: 1, concurrencyVersion: 1 } });
     });
 
     expect(result.current.isLoading).toBe(false);
   });
 
   it('should call onSuccess callback', async () => {
-    const mockStory: UserStoryDto = {
+    const mockItem: WorkItemDto = {
       id: 1,
-      title: 'Created Story',
+      type: 1,
+      title: 'Created Item',
       statusId: 2,
       statusName: 'To Do',
       priority: 3,
@@ -144,44 +156,48 @@ describe('useCreateUserStory', () => {
       concurrencyVersion: 1,
     };
 
-    mockUserStoryService.create.mockResolvedValue({
+    mockService.create.mockResolvedValue({
       success: true,
-      data: mockStory,
+      data: mockItem,
     });
 
     const onSuccess = vi.fn();
 
-    const { result } = renderHook(() => useCreateUserStory({ onSuccess }));
+    const { result } = renderHook(() => useCreateWorkItem({ onSuccess }));
 
     await act(async () => {
       await result.current.create({
-        title: 'Created Story',
+        type: 1,
+        title: 'Created Item',
         statusId: 2,
         priority: 3,
         projectId: 1,
-      } as CreateUserStoryRequestDto);
+        concurrencyVersion: 1,
+      } as CreateWorkItemRequestDto);
     });
 
-    expect(onSuccess).toHaveBeenCalledWith(mockStory);
+    expect(onSuccess).toHaveBeenCalledWith(mockItem);
   });
 
   it('should call onError callback on failure', async () => {
-    mockUserStoryService.create.mockResolvedValue({
+    mockService.create.mockResolvedValue({
       success: false,
       errors: [{ code: 'ERROR', message: 'Error', type: 'Error' }],
     });
 
     const onError = vi.fn();
 
-    const { result } = renderHook(() => useCreateUserStory({ onError }));
+    const { result } = renderHook(() => useCreateWorkItem({ onError }));
 
     await act(async () => {
       await result.current.create({
+        type: 1,
         title: 'Test',
         statusId: 1,
         priority: 2,
         projectId: 1,
-      } as CreateUserStoryRequestDto);
+        concurrencyVersion: 1,
+      } as CreateWorkItemRequestDto);
     });
 
     expect(onError).toHaveBeenCalledWith('Error');

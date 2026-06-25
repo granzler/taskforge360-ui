@@ -2,37 +2,39 @@
 
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useCreateUserStory } from '../hooks/useCreateUserStory';
-import { CreateUserStoryRequestDto } from '@/domain/entities/UserStory';
+import { useCreateWorkItem } from '../hooks/useCreateWorkItem';
+import { CreateWorkItemRequestDto } from '@/domain/entities/WorkItem';
 import { Sprint } from '@/domain/entities/Sprint';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import { UserStoryStatus } from '@/domain/types';
-import UserStoryForm from './UserStoryForm';
+import { WorkItemStatus, WorkItemType, WORK_ITEM_TYPE_LABELS } from '@/domain/types';
+import WorkItemForm from './WorkItemForm';
 
-interface CreateUserStoryModalProps {
+interface CreateWorkItemModalProps {
     projectId: number;
     projectName: string;
     sprints?: Sprint[];
     epics?: EpicResponseDto[];
     sprintId?: number;
     epicId?: number;
+    defaultType?: WorkItemType;      // For creating a specific type (e.g., Task from story detail)
     onClose: () => void;
-    onCreated: (storyId?: number) => void;
+    onCreated: (workItemId?: number) => void;
 }
 
-export default function CreateUserStoryModal({
+export default function CreateWorkItemModal({
     projectId,
     projectName,
     sprints = [],
     epics = [],
     sprintId,
     epicId,
+    defaultType = WorkItemType.Story,
     onClose,
     onCreated,
-}: CreateUserStoryModalProps) {
-    const { create, isLoading } = useCreateUserStory({
-        onSuccess: (story) => {
-            onCreated(story.id);
+}: CreateWorkItemModalProps) {
+    const { create, isLoading } = useCreateWorkItem({
+        onSuccess: (item) => {
+            onCreated(item.id);
         },
     });
 
@@ -51,28 +53,33 @@ export default function CreateUserStoryModal({
         statusId: number;
         acceptanceCriteria?: string;
         sprintId?: number;
-        epicId?: number;
+        parentId?: number;
+        type: WorkItemType;
         projectId: number;
         priority: number;
         assignedTo?: string;
         labelIds?: number[];
     }) => {
-        const dto: CreateUserStoryRequestDto = {
+        const dto: CreateWorkItemRequestDto = {
+            type: data.type,
             title: data.title,
             description: data.description,
             storyPoints: data.storyPoints,
             statusId: data.statusId,
             acceptanceCriteria: data.acceptanceCriteria,
-            sprintId: data.sprintId,
-            epicId: data.epicId,
+            sprintId: data.type === WorkItemType.Task ? undefined : data.sprintId,
+            parentId: data.parentId,
             projectId: data.projectId,
             priority: data.priority,
             assignedTo: data.assignedTo,
             labelIds: data.labelIds,
+            concurrencyVersion: 1,
         };
 
         await create(dto);
     };
+
+    const typeLabel = WORK_ITEM_TYPE_LABELS[defaultType] || 'Work Item';
 
     return (
         <>
@@ -88,7 +95,7 @@ export default function CreateUserStoryModal({
                 >
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                         <div>
-                            <h2 className="text-base font-bold">Create User Story</h2>
+                            <h2 className="text-base font-bold">Create {typeLabel}</h2>
                             <p className="text-xs text-muted-foreground mt-0.5">{projectName}</p>
                         </div>
                         <button
@@ -100,24 +107,26 @@ export default function CreateUserStoryModal({
                     </div>
 
                     <div className="px-6 py-5">
-                        <UserStoryForm
+                        <WorkItemForm
                             initialData={{
                                 title: '',
                                 description: undefined,
                                 storyPoints: undefined,
-                                statusId: UserStoryStatus.Backlog,
+                                statusId: WorkItemStatus.Backlog,
                                 acceptanceCriteria: undefined,
                                 sprintId: sprintId,
-                                epicId: epicId,
+                                parentId: epicId,
                             }}
                             projectId={projectId}
                             sprints={sprints}
                             epics={epics}
                             isSprintReadOnly={!!sprintId}
                             isLoading={isLoading}
+                            showTypeSelector={true}
+                            defaultType={defaultType}
                             onSubmit={handleSubmit}
                             onCancel={onClose}
-                            submitLabel="Create Story"
+                            submitLabel={`Create ${typeLabel}`}
                         />
                     </div>
                 </div>

@@ -5,18 +5,12 @@ export default withAuth(
   function proxy(req) {
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
-    const roles = (token?.roles as string[]) || [];
     const scopes = (token?.scopes as string[]) || [];
 
     // 1. Protect projects paths (/projects/*)
-    // Require any role with read access (all realm roles have projects:read)
+    // Uses scope-based auth — all realm roles have projects:read
     if (pathname.startsWith("/projects")) {
-      const hasAccess =
-        roles.includes("system-admin") ||
-        roles.includes("product-owner") ||
-        roles.includes("scrum-master") ||
-        roles.includes("developer") ||
-        scopes.includes("projects:read");
+      const hasAccess = scopes.includes("projects:read");
 
       if (!hasAccess) {
         return NextResponse.redirect(new URL("/unauthorized", req.url));
@@ -24,13 +18,9 @@ export default withAuth(
     }
 
     // 2. Protect admin paths (/admin/*)
-    // Require 'system-admin', 'product-owner', or 'scrum-master' roles or 'labels:create' scope
+    // Uses scope-based auth — only system-admin, product-owner, and scrum-master have labels:create
     if (pathname.startsWith("/admin")) {
-      const hasAccess =
-        roles.includes("system-admin") ||
-        roles.includes("product-owner") ||
-        roles.includes("scrum-master") ||
-        scopes.includes("labels:create");
+      const hasAccess = scopes.includes("labels:create");
 
       if (!hasAccess) {
         return NextResponse.redirect(new URL("/unauthorized", req.url));

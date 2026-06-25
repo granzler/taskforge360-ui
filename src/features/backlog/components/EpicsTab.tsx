@@ -3,17 +3,17 @@
 import { useState, useRef, useEffect, memo } from 'react';
 import { Plus, Layers, Pencil, Mountain, ChevronDown, Loader2 } from 'lucide-react';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import { UserStoryDto } from '@/domain/entities/UserStory';
+import { WorkItemDto } from '@/domain/entities/WorkItem';
 import { getEpicPriorityColor, getStatusIcon } from '@/lib/utils/colors';
-import { Status, getWorkItemPriorityLabel, EpicStatus, EPIC_STATUS_LABELS, USER_STORY_STATUS_LABELS, UserStoryStatus } from '@/domain/types';
+import { Status, getWorkItemPriorityLabel, EpicStatus, EPIC_STATUS_LABELS, WORK_ITEM_STATUS_LABELS, WorkItemStatus, WorkItemType, WORK_ITEM_TYPE_LABELS } from '@/domain/types';
 import { EmptyState } from '@/components/ui';
 
 interface EpicsTabProps {
     epics: EpicResponseDto[];
-    userStories: UserStoryDto[];
+    workItems: WorkItemDto[];               // replaces userStories
     onCreateEpic: () => void;
     onEditEpic: (epic: EpicResponseDto) => void;
-    onLinkStory?: (epicId: number, storyId: number) => Promise<boolean>;
+    onLinkStory?: (epicId: number, workItemId: number) => Promise<boolean>; // renamed param
     canCreateEpic?: boolean;
     canUpdateEpic?: boolean;
     canLinkStory?: boolean;
@@ -21,7 +21,7 @@ interface EpicsTabProps {
 
 function EpicCard({ 
     epic, 
-    stories, 
+    stories,                           // still called stories internally for display
     onEditEpic, 
     onLinkStory,
     unlinkedStories,
@@ -29,10 +29,10 @@ function EpicCard({
     canLinkStory = false,
 }: { 
     epic: EpicResponseDto; 
-    stories: UserStoryDto[];
+    stories: WorkItemDto[];            // type changed
     onEditEpic: (epic: EpicResponseDto) => void;
-    onLinkStory?: (epicId: number, storyId: number) => Promise<boolean>;
-    unlinkedStories: UserStoryDto[];
+    onLinkStory?: (epicId: number, workItemId: number) => Promise<boolean>;
+    unlinkedStories: WorkItemDto[];    // type changed
     canUpdateEpic?: boolean;
     canLinkStory?: boolean;
 }) {
@@ -42,7 +42,7 @@ function EpicCard({
 
     const totalStoryPoints = stories.reduce((sum, s) => sum + (s.storyPoints || 0), 0);
     const doneStoryPoints = stories
-        .filter(s => s.statusId === UserStoryStatus.Done || s.statusName?.toLowerCase() === 'done')
+        .filter(s => s.statusId === WorkItemStatus.Done || s.statusName?.toLowerCase() === 'done')
         .reduce((sum, s) => sum + (s.storyPoints || 0), 0);
     const progress = totalStoryPoints > 0 ? (doneStoryPoints / totalStoryPoints) * 100 : 0;
 
@@ -56,10 +56,10 @@ function EpicCard({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleLinkStory = async (storyId: number) => {
+    const handleLinkStory = async (workItemId: number) => {
         if (!onLinkStory) return;
-        setLinkingStoryId(storyId);
-        const success = await onLinkStory(epic.id, storyId);
+        setLinkingStoryId(workItemId);
+        const success = await onLinkStory(epic.id, workItemId);
         if (success) {
             setShowDropdown(false);
         }
@@ -108,23 +108,31 @@ function EpicCard({
                     </div>
                     <div className="flex items-center gap-2 pt-2">
                         <Layers size={14} className="text-slate-400" />
-                        <span className="text-xs font-medium">{stories.length} User Stories ({totalStoryPoints} pts)</span>
+                        <span className="text-xs font-medium">{stories.length} items ({totalStoryPoints} pts)</span>
                     </div>
                 </div>
             </div>
 
             <div className="border-t border-border bg-accent/10 p-4">
-                <h4 className="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-3">Associated Stories</h4>
+                <h4 className="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-3">Associated Items</h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                    {stories.map(s => (
-                        <div key={s.id} className="flex items-center gap-2 p-2 rounded-md bg-background border border-border/50 text-xs">
-                            {getStatusIcon((USER_STORY_STATUS_LABELS[s.statusId as UserStoryStatus] || s.statusName || 'To Do') as Status)}
-                            <span className="truncate flex-1">{s.title}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">{s.storyPoints || 0}pt</span>
-                        </div>
-                    ))}
+                    {stories.map(s => {
+                        const typeLabel = WORK_ITEM_TYPE_LABELS[s.type as WorkItemType] || '';
+                        return (
+                            <div key={s.id} className="flex items-center gap-2 p-2 rounded-md bg-background border border-border/50 text-xs">
+                                {getStatusIcon((WORK_ITEM_STATUS_LABELS[s.statusId as WorkItemStatus] || s.statusName || 'To Do') as Status)}
+                                <span className="truncate flex-1">{s.title}</span>
+                                {typeLabel && (
+                                    <span className="text-[9px] font-semibold uppercase px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                        {typeLabel}
+                                    </span>
+                                )}
+                                <span className="text-[10px] text-slate-400 font-mono">{s.storyPoints || 0}pt</span>
+                            </div>
+                        );
+                    })}
                     {stories.length === 0 && (
-                        <p className="text-[10px] text-slate-400 italic">No stories linked to this epic.</p>
+                        <p className="text-[10px] text-slate-400 italic">No items linked to this epic.</p>
                     )}
                 </div>
                 <div className="mt-3 relative" ref={dropdownRef}>
@@ -134,7 +142,7 @@ function EpicCard({
                                 onClick={() => setShowDropdown(!showDropdown)}
                                 className="w-full text-[10px] font-bold text-primary hover:underline flex items-center justify-center gap-1"
                             >
-                                <Plus size={12} /> Link Story
+                                <Plus size={12} /> Link Item
                                 <ChevronDown size={10} />
                             </button>
                             {showDropdown && (
@@ -149,7 +157,7 @@ function EpicCard({
                                             {linkingStoryId === s.id ? (
                                                 <Loader2 size={12} className="animate-spin" />
                                             ) : (
-                                                getStatusIcon((USER_STORY_STATUS_LABELS[s.statusId as UserStoryStatus] || s.statusName || 'To Do') as Status)
+                                                getStatusIcon((WORK_ITEM_STATUS_LABELS[s.statusId as WorkItemStatus] || s.statusName || 'To Do') as Status)
                                             )}
                                             <span className="truncate flex-1">{s.title}</span>
                                         </button>
@@ -159,7 +167,7 @@ function EpicCard({
                         </>
                     ) : (
                         <div className="w-full text-[10px] text-slate-400 flex items-center justify-center gap-1">
-                            <Plus size={12} /> No stories available
+                            <Plus size={12} /> No items available
                         </div>
                     )}
                 </div>
@@ -168,13 +176,13 @@ function EpicCard({
     );
 }
 
-const EpicsTab = memo(function EpicsTab({ epics, userStories, onCreateEpic, onEditEpic, onLinkStory, canCreateEpic = false, canUpdateEpic = false, canLinkStory = false }: EpicsTabProps) {
+const EpicsTab = memo(function EpicsTab({ epics, workItems, onCreateEpic, onEditEpic, onLinkStory, canCreateEpic = false, canUpdateEpic = false, canLinkStory = false }: EpicsTabProps) {
     if (epics.length === 0) {
         return (
             <EmptyState
                 icon={<Mountain size={32} />}
                 title="No epics yet"
-                description="Create your first epic to organize your user stories into larger goals."
+                description="Create your first epic to organize your work items into larger goals."
                 action={
                     canCreateEpic ? (
                         <button
@@ -205,7 +213,7 @@ const EpicsTab = memo(function EpicsTab({ epics, userStories, onCreateEpic, onEd
         return (statusOrder[a.statusId] ?? 5) - (statusOrder[b.statusId] ?? 5);
     });
 
-    const unlinkedStories = userStories.filter(s => !s.epicId);
+    const unlinkedWorkItems = workItems.filter(s => !s.parentId);
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -213,10 +221,10 @@ const EpicsTab = memo(function EpicsTab({ epics, userStories, onCreateEpic, onEd
                 <EpicCard
                     key={epic.id}
                     epic={epic}
-                    stories={userStories.filter(s => s.epicId === epic.id)}
+                    stories={workItems.filter(s => s.parentId === epic.id)}
                     onEditEpic={onEditEpic}
                     onLinkStory={onLinkStory}
-                    unlinkedStories={unlinkedStories}
+                    unlinkedStories={unlinkedWorkItems}
                     canUpdateEpic={canUpdateEpic}
                     canLinkStory={canLinkStory}
                 />

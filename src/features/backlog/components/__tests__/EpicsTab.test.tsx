@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import EpicsTab from '../EpicsTab';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import { UserStoryDto } from '@/domain/entities/UserStory';
+import { WorkItemDto } from '@/domain/entities/WorkItem';
 
 const mockEpic: EpicResponseDto = {
   id: 1,
@@ -13,25 +13,27 @@ const mockEpic: EpicResponseDto = {
   priority: 1,
   statusId: 1,
   statusName: 'In Progress',
-  userStories: [],
+  children: [],
   concurrencyVersion: 1,
 };
 
-const mockLinkedStory: UserStoryDto = {
+const mockLinkedItem: WorkItemDto = {
   id: 1,
-  title: 'Linked Story',
+  type: 1, // Story
+  title: 'Linked Item',
   statusId: 14,
   statusName: 'Done',
   priority: 2,
   projectId: 1,
   storyPoints: 5,
-  epicId: 1,
+  parentId: 1,
   concurrencyVersion: 1,
 };
 
-const mockUnlinkedStory: UserStoryDto = {
+const mockUnlinkedItem: WorkItemDto = {
   id: 2,
-  title: 'Unlinked Story',
+  type: 1, // Story
+  title: 'Unlinked Item',
   statusId: 7,
   statusName: 'To Do',
   priority: 2,
@@ -49,7 +51,7 @@ describe('EpicsTab', () => {
     render(
       <EpicsTab
         epics={[mockEpic]}
-        userStories={[]}
+        workItems={[]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
       />
@@ -63,7 +65,7 @@ describe('EpicsTab', () => {
     render(
       <EpicsTab
         epics={[]}
-        userStories={[]}
+        workItems={[]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
         canCreateEpic={true}
@@ -74,36 +76,36 @@ describe('EpicsTab', () => {
     expect(screen.getByText('Create Epic')).toBeInTheDocument();
   });
 
-  it('should show linked stories', () => {
+  it('should show linked items', () => {
     render(
       <EpicsTab
         epics={[mockEpic]}
-        userStories={[mockLinkedStory]}
+        workItems={[mockLinkedItem]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
       />
     );
 
-    expect(screen.getByText('Linked Story')).toBeInTheDocument();
-    expect(screen.getByText(/1 User Stories/)).toBeInTheDocument();
+    expect(screen.getByText('Linked Item')).toBeInTheDocument();
+    expect(screen.getByText(/1 items/)).toBeInTheDocument();
   });
 
-  it('should show no stories linked message when empty', () => {
+  it('should show no items linked message when empty', () => {
     render(
       <EpicsTab
         epics={[mockEpic]}
-        userStories={[]}
+        workItems={[]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
       />
     );
 
-    expect(screen.getByText('No stories linked to this epic.')).toBeInTheDocument();
+    expect(screen.getByText('No items linked to this epic.')).toBeInTheDocument();
   });
 
   it('should calculate progress based on story points', () => {
-    const inProgressStory: UserStoryDto = {
-      ...mockLinkedStory,
+    const inProgressItem: WorkItemDto = {
+      ...mockLinkedItem,
       id: 2,
       statusId: 8,
       statusName: 'In Progress',
@@ -113,7 +115,7 @@ describe('EpicsTab', () => {
     render(
       <EpicsTab
         epics={[mockEpic]}
-        userStories={[mockLinkedStory, inProgressStory]}
+        workItems={[mockLinkedItem, inProgressItem]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
       />
@@ -126,7 +128,7 @@ describe('EpicsTab', () => {
     render(
       <EpicsTab
         epics={[mockEpic]}
-        userStories={[mockLinkedStory]}
+        workItems={[mockLinkedItem]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
       />
@@ -135,11 +137,11 @@ describe('EpicsTab', () => {
     expect(screen.getByText(/5 pts/)).toBeInTheDocument();
   });
 
-  it('should show Link Story button when onLinkStory is provided and there are unlinked stories', () => {
+  it('should show Link Item button when onLinkStory is provided and there are unlinked items', () => {
     render(
       <EpicsTab
         epics={[mockEpic]}
-        userStories={[mockUnlinkedStory]}
+        workItems={[mockUnlinkedItem]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
         onLinkStory={vi.fn()}
@@ -147,20 +149,20 @@ describe('EpicsTab', () => {
       />
     );
 
-    expect(screen.getAllByText('Link Story').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Link Item').length).toBeGreaterThan(0);
   });
 
-  it('should show no stories available when all stories are linked', () => {
+  it('should show no items available when all items are linked', () => {
     render(
       <EpicsTab
         epics={[mockEpic]}
-        userStories={[mockLinkedStory]}
+        workItems={[mockLinkedItem]}
         onCreateEpic={vi.fn()}
         onEditEpic={vi.fn()}
         onLinkStory={vi.fn()}
       />
     );
 
-    expect(screen.getAllByText('No stories available').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('No items available').length).toBeGreaterThan(0);
   });
 });

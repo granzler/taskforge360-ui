@@ -15,21 +15,22 @@ import {
 } from '@dnd-kit/core';
 import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2, GripVertical } from 'lucide-react';
 import { SubTask, Epic } from '@/domain/entities/Project';
-import { UserStoryDto } from '@/domain/entities/UserStory';
+import { WorkItemDto } from '@/domain/entities/WorkItem';
+import { UpdateWorkItemRequestDto } from '@/domain/entities/WorkItem';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { Sprint } from '@/domain/entities/Sprint';
-import { userStoryService } from '@/infrastructure/services/userStoryService';
+import { workItemService } from '@/infrastructure/services/workItemService';
 import { sprintService } from '@/infrastructure/services/sprintService';
 import { toast } from 'react-hot-toast';
 import { notifyResult } from '@/lib/utils/notify';
-import UserStoryItem, { type UserStoryItemProps } from './UserStoryItem';
-import CreateUserStoryModal from './CreateUserStoryModal';
-import EditUserStoryModal from './EditUserStoryModal';
+import WorkItemCard, { type WorkItemCardProps } from './WorkItemCard';
+import CreateWorkItemModal from './CreateWorkItemModal';
+import EditWorkItemModal from './EditWorkItemModal';
 
 type EpicItem = Epic | EpicResponseDto;
 
 interface SprintWithStories extends Sprint {
-    stories: UserStoryDto[];
+    workItems: WorkItemDto[];
     totalStoryPoints: number;
 }
 
@@ -37,21 +38,21 @@ interface SprintsTabProps {
     projectId: number;
     projectName: string;
     sprints: Sprint[];
-    userStories: UserStoryDto[];
-    subtasks: SubTask[];
+    workItems: WorkItemDto[];                       // renamed from userStories
+    tasks: SubTask[];                                // kept for backward compat
     epics: EpicItem[];
     onSprintDeleted: (sprintId: number) => void;
-    onStoryCreated: (storyId: number) => void;
-    onStoryUpdated?: (story: UserStoryDto) => void;
+    onWorkItemCreated: (workItemId: number) => void;  // renamed from onStoryCreated
+    onWorkItemUpdated?: (workItem: WorkItemDto) => void; // renamed from onStoryUpdated
     canDeleteSprint?: boolean;
     canCreateStory?: boolean;
     canUpdateStory?: boolean;
 }
 
-function DraggableStory({ story, ...rest }: { story: UserStoryDto } & Pick<UserStoryItemProps, 'isExpanded' | 'onToggle' | 'onEdit' | 'subtasks' | 'epic' | 'canUpdateStory'>) {
+function DraggableWorkItem({ workItem, ...rest }: { workItem: WorkItemDto } & Pick<WorkItemCardProps, 'isExpanded' | 'onToggle' | 'onEdit' | 'tasks' | 'epic' | 'canUpdateStory'>) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-        id: `story-${story.id}`,
-        data: { story },
+        id: `workitem-${workItem.id}`,
+        data: { workItem },
     });
 
     const style = transform ? {
@@ -70,7 +71,7 @@ function DraggableStory({ story, ...rest }: { story: UserStoryDto } & Pick<UserS
                 <GripVertical size={14} />
             </button>
             <div className="pl-0">
-                <UserStoryItem story={story} {...rest} />
+                <WorkItemCard workItem={workItem} {...rest} />
             </div>
         </div>
     );
@@ -93,19 +94,19 @@ const SprintsTab = memo(function SprintsTab({
     projectId,
     projectName,
     sprints,
-    userStories,
-    subtasks,
+    workItems,
+    tasks,
     epics,
     onSprintDeleted,
-    onStoryCreated,
-    onStoryUpdated,
+    onWorkItemCreated,
+    onWorkItemUpdated,
     canDeleteSprint = false,
     canCreateStory = false,
     canUpdateStory = false,
 }: SprintsTabProps) {
     const [expandedSprints, setExpandedSprints] = useState<number[]>([1, 2]);
-    const [expandedStories, setExpandedStories] = useState<number[]>([]);
-    const [activeDragStory, setActiveDragStory] = useState<UserStoryDto | null>(null);
+    const [expandedWorkItems, setExpandedWorkItems] = useState<number[]>([]);
+    const [activeDragWorkItem, setActiveDragWorkItem] = useState<WorkItemDto | null>(null);
 
     const [menuOpenSprintId, setMenuOpenSprintId] = useState<number | null>(null);
     const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
@@ -113,7 +114,7 @@ const SprintsTab = memo(function SprintsTab({
 
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [createModalSprintId, setCreateModalSprintId] = useState<number | undefined>(undefined);
-    const [editingStory, setEditingStory] = useState<UserStoryDto | null>(null);
+    const [editingWorkItem, setEditingWorkItem] = useState<WorkItemDto | null>(null);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -127,24 +128,24 @@ const SprintsTab = memo(function SprintsTab({
         );
     };
 
-    const toggleStory = (id: number) => {
-        setExpandedStories(prev =>
+    const toggleWorkItem = (id: number) => {
+        setExpandedWorkItems(prev =>
             prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
         );
     };
 
-    const storiesBySprint: SprintWithStories[] = sprints.map(sprint => {
-        const sprintStories = userStories.filter(us => us.sprintId === sprint.id);
-        const totalStoryPoints = sprintStories.reduce((sum, us) => sum + (us.storyPoints || 0), 0);
+    const workItemsBySprint: SprintWithStories[] = sprints.map(sprint => {
+        const sprintItems = workItems.filter(wi => wi.sprintId === sprint.id);
+        const totalStoryPoints = sprintItems.reduce((sum, wi) => sum + (wi.storyPoints || 0), 0);
         return {
             ...sprint,
-            stories: sprintStories,
+            workItems: sprintItems,
             totalStoryPoints
         };
     });
 
-    const unassignedStories = userStories.filter(us => !us.sprintId);
-    const unassignedStoryPoints = unassignedStories.reduce((sum, us) => sum + (us.storyPoints || 0), 0);
+    const unassignedWorkItems = workItems.filter(wi => !wi.sprintId);
+    const unassignedStoryPoints = unassignedWorkItems.reduce((sum, wi) => sum + (wi.storyPoints || 0), 0);
 
     const getStatusColor = (statusName: string) => {
         switch (statusName.toLowerCase()) {
@@ -162,17 +163,17 @@ const SprintsTab = memo(function SprintsTab({
     };
 
     const handleDragStart = (event: DragStartEvent) => {
-        const story = event.active.data.current?.story as UserStoryDto;
-        if (story) setActiveDragStory(story);
+        const workItem = event.active.data.current?.workItem as WorkItemDto;
+        if (workItem) setActiveDragWorkItem(workItem);
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
-        setActiveDragStory(null);
+        setActiveDragWorkItem(null);
         const { active, over } = event;
         if (!over || !active) return;
 
-        const story = active.data.current?.story as UserStoryDto;
-        if (!story) return;
+        const workItem = active.data.current?.workItem as WorkItemDto;
+        if (!workItem) return;
 
         const targetId = over.id as string;
         let newSprintId: number | undefined;
@@ -185,30 +186,31 @@ const SprintsTab = memo(function SprintsTab({
             return;
         }
 
-        if (newSprintId === story.sprintId) return;
+        if (newSprintId === workItem.sprintId) return;
 
         try {
-            const result = await userStoryService.update(story.id, {
-                title: story.title,
-                description: story.description,
-                statusId: story.statusId,
-                priority: story.priority,
-                projectId: story.projectId,
-                storyPoints: story.storyPoints,
-                acceptanceCriteria: story.acceptanceCriteria,
+            const dto: UpdateWorkItemRequestDto = {
+                title: workItem.title,
+                description: workItem.description,
+                statusId: workItem.statusId,
+                priority: workItem.priority,
+                projectId: workItem.projectId,
+                storyPoints: workItem.storyPoints,
+                acceptanceCriteria: workItem.acceptanceCriteria,
                 sprintId: newSprintId,
-                epicId: story.epicId,
-                assignedTo: story.assignedTo,
-                labelIds: story.labels?.map(l => l.id),
-                concurrencyVersion: story.concurrencyVersion,
-            });
+                assignedTo: workItem.assignedTo,
+                labelIds: workItem.labels?.map(l => l.id),
+                concurrencyVersion: workItem.concurrencyVersion,
+            };
 
-            if (notifyResult(result, { success: `Story moved to ${newSprintId ? sprints.find(s => s.id === newSprintId)?.name || 'sprint' : 'backlog'}!` })) {
-                onStoryUpdated?.(result.data);
+            const result = await workItemService.update(workItem.id, dto);
+
+            if (notifyResult(result, { success: `Item moved to ${newSprintId ? sprints.find(s => s.id === newSprintId)?.name || 'sprint' : 'backlog'}!` })) {
+                onWorkItemUpdated?.(result.data);
             }
         } catch (err) {
-            console.error('Failed to move story:', err);
-            toast.error('Failed to move story.');
+            console.error('Failed to move work item:', err);
+            toast.error('Failed to move work item.');
         }
     };
 
@@ -238,7 +240,7 @@ const SprintsTab = memo(function SprintsTab({
             onDragEnd={handleDragEnd}
         >
             <div className="space-y-6">
-                {storiesBySprint.map(sprint => (
+                {workItemsBySprint.map(sprint => (
                     <div key={sprint.id} className="rounded-xl border border-border bg-card/50 shadow-sm relative transition-all">
                         <div
                             className={`bg-accent/30 p-4 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors ${expandedSprints.includes(sprint.id) ? 'rounded-t-xl' : 'rounded-xl'}`}
@@ -261,7 +263,7 @@ const SprintsTab = memo(function SprintsTab({
                             <div className="flex items-center gap-6">
                                 <div className="text-right">
                                     <p className="text-[10px] text-slate-500 uppercase font-bold">{sprint.totalStoryPoints} pts</p>
-                                    <p className="text-[10px] text-muted-foreground">{sprint.stories.length} stories</p>
+                                    <p className="text-[10px] text-muted-foreground">{sprint.workItems.length} items</p>
                                 </div>
                                 <div className="relative">
                                     <button
@@ -305,22 +307,22 @@ const SprintsTab = memo(function SprintsTab({
 
                         {expandedSprints.includes(sprint.id) && (
                             <DroppableZone id={`sprint-${sprint.id}`} className="p-4 border-t border-border bg-background/20 rounded-b-xl min-h-[100px]">
-                                {sprint.stories.length > 0 ? (
-                                    sprint.stories.map((story, idx) => (
-                                        <DraggableStory
-                                            key={`${story.id}-${idx}`}
-                                            story={story}
-                                            isExpanded={expandedStories.includes(story.id)}
-                                            onToggle={toggleStory}
-                                            onEdit={(story: UserStoryDto) => setEditingStory(story)}
-                                            subtasks={subtasks.filter(st => st.userStoryId === story.id)}
-                                            epic={epics.find(e => e.id === story.epicId)}
+                                {sprint.workItems.length > 0 ? (
+                                    sprint.workItems.map((workItem, idx) => (
+                                        <DraggableWorkItem
+                                            key={`${workItem.id}-${idx}`}
+                                            workItem={workItem}
+                                            isExpanded={expandedWorkItems.includes(workItem.id)}
+                                            onToggle={toggleWorkItem}
+                                            onEdit={(workItem: WorkItemDto) => setEditingWorkItem(workItem)}
+                                            tasks={[]}  // Tasks loaded separately or via parent context
+                                            epic={epics.find(e => e.id === workItem.parentId)}
                                             canUpdateStory={canUpdateStory}
                                         />
                                     ))
                                 ) : (
                                     <div className="text-center py-8 text-slate-500 border-2 border-dashed border-border rounded-lg text-sm">
-                                        No stories in this sprint. Drag here to add.
+                                        No work items in this sprint. Drag here to add.
                                     </div>
                                 )}
                                 {canCreateStory && (
@@ -331,7 +333,7 @@ const SprintsTab = memo(function SprintsTab({
                                             setShowCreateModal(true);
                                         }}
                                     >
-                                        <Plus size={14} /> Add User Story
+                                        <Plus size={14} /> Add Work Item
                                     </button>
                                 )}
                             </DroppableZone>
@@ -339,7 +341,7 @@ const SprintsTab = memo(function SprintsTab({
                     </div>
                 ))}
 
-                {/* Backlog / Unassigned Stories */}
+                {/* Backlog / Unassigned Work Items */}
                 <div className="relative pt-4">
                     <div className="absolute inset-0 flex items-center" aria-hidden="true">
                         <div className="w-full border-t border-border"></div>
@@ -347,7 +349,7 @@ const SprintsTab = memo(function SprintsTab({
                     <div className="relative flex justify-center">
                         <span className="bg-background px-3 text-xs font-bold text-slate-500 uppercase tracking-widest">
                             Backlog / Unassigned
-                            {unassignedStories.length > 0 && (
+                            {unassignedWorkItems.length > 0 && (
                                 <span className="ml-2 text-muted-foreground font-normal">
                                     ({unassignedStoryPoints} pts)
                                 </span>
@@ -357,16 +359,16 @@ const SprintsTab = memo(function SprintsTab({
                 </div>
 
                 <DroppableZone id="backlog-zone" className="p-4 rounded-xl border border-border bg-background shadow-sm min-h-[100px]">
-                    {unassignedStories.length > 0 ? (
-                        unassignedStories.map((story, idx) => (
-                            <DraggableStory
-                                key={`unassigned-${story.id}-${idx}`}
-                                story={story}
-                                isExpanded={expandedStories.includes(story.id)}
-                                onToggle={toggleStory}
-                                onEdit={(story: UserStoryDto) => setEditingStory(story)}
-                                subtasks={subtasks.filter(st => st.userStoryId === story.id)}
-                                epic={epics.find(e => e.id === story.epicId)}
+                    {unassignedWorkItems.length > 0 ? (
+                        unassignedWorkItems.map((workItem, idx) => (
+                            <DraggableWorkItem
+                                key={`unassigned-${workItem.id}-${idx}`}
+                                workItem={workItem}
+                                isExpanded={expandedWorkItems.includes(workItem.id)}
+                                onToggle={toggleWorkItem}
+                                onEdit={(workItem: WorkItemDto) => setEditingWorkItem(workItem)}
+                                tasks={[]}
+                                epic={epics.find(e => e.id === workItem.parentId)}
                                 canUpdateStory={canUpdateStory}
                             />
                         ))
@@ -380,9 +382,9 @@ const SprintsTab = memo(function SprintsTab({
 
             {/* Drag Overlay */}
             <DragOverlay>
-                {activeDragStory ? (
+                {activeDragWorkItem ? (
                     <div className="p-3 bg-background border border-primary/30 rounded-xl shadow-xl opacity-90">
-                        <p className="font-bold text-sm">{activeDragStory.title}</p>
+                        <p className="font-bold text-sm">{activeDragWorkItem.title}</p>
                     </div>
                 ) : null}
             </DragOverlay>
@@ -398,7 +400,7 @@ const SprintsTab = memo(function SprintsTab({
                             <h2 className="text-lg font-bold text-foreground">Delete Sprint?</h2>
                         </div>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                            Are you sure you want to delete the sprint <strong>&quot;{sprintToDelete.name}&quot;</strong>? This action cannot be undone. Associated user stories will be moved to the backlog.
+                            Are you sure you want to delete the sprint <strong>&quot;{sprintToDelete.name}&quot;</strong>? This action cannot be undone. Associated work items will be moved to the backlog.
                         </p>
                         <div className="flex justify-end gap-3 w-full">
                             <button
@@ -424,32 +426,32 @@ const SprintsTab = memo(function SprintsTab({
                 </div>
             )}
 
-            {/* Create User Story Modal */}
+            {/* Create Work Item Modal */}
             {showCreateModal && (
-                <CreateUserStoryModal
+                <CreateWorkItemModal
                     projectId={projectId}
                     projectName={projectName}
                     sprints={sprints}
                     epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
                     sprintId={createModalSprintId}
                     onClose={() => setShowCreateModal(false)}
-                    onCreated={(storyId) => {
+                    onCreated={(workItemId) => {
                         setShowCreateModal(false);
-                        if (storyId) {
-                            onStoryCreated(storyId);
+                        if (workItemId) {
+                            onWorkItemCreated(workItemId);
                         }
                     }}
                 />
             )}
 
-            {/* Edit User Story Modal */}
-            {editingStory && (
-                <EditUserStoryModal
-                    story={editingStory}
-                    isOpen={!!editingStory}
-                    onClose={() => setEditingStory(null)}
-                    onUpdated={(story) => {
-                        onStoryUpdated?.(story);
+            {/* Edit Work Item Modal */}
+            {editingWorkItem && (
+                <EditWorkItemModal
+                    workItem={editingWorkItem}
+                    isOpen={!!editingWorkItem}
+                    onClose={() => setEditingWorkItem(null)}
+                    onUpdated={(workItem) => {
+                        onWorkItemUpdated?.(workItem);
                     }}
                     sprints={sprints}
                     epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
