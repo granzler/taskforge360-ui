@@ -21,10 +21,6 @@ export default function AdminLabelsPage() {
     const canDelete = hasScope('labels:delete');
     const canUpdate = hasScope('labels:update');
 
-    useEffect(() => {
-        fetchLabels();
-    }, []);
-
     const fetchLabels = async () => {
         try {
             const result = await globalLabelService.getAll();
@@ -38,6 +34,10 @@ export default function AdminLabelsPage() {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchLabels();
+    }, []);
 
     const handleDelete = async () => {
         if (selectedLabels.length === 0) return;

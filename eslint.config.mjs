@@ -8,6 +8,11 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      // New error in eslint-config-next 16.4.0. The existing
+      // "reset state from props in an effect" patterns (ProjectForm,
+      // WorkItemForm, admin label edit) predate the rule and refactoring
+      // them changes behavior, so track them as warnings first.
+      "react-hooks/set-state-in-effect": "warn",
     },
   },
   // Override default ignores of eslint-config-next.

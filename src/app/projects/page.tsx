@@ -24,10 +24,6 @@ export default function ProjectsPage() {
     const canDelete = hasScope('projects:delete');
     const canUpdate = hasScope('projects:update');
 
-    useEffect(() => {
-        fetchProjects();
-    }, []);
-
     const fetchProjects = async () => {
         try {
             const result = await projectService.getAll();
@@ -41,6 +37,10 @@ export default function ProjectsPage() {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchProjects();
+    }, []);
 
     const handleDelete = async () => {
         if (selectedProjects.length === 0) return;

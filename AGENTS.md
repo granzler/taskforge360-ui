@@ -19,9 +19,11 @@ npx vitest --ui        # Vitest UI
 - `npm run test` leaves Vitest in **watch mode**; use `npx vitest run` to verify.
 - Verification order before committing: `npm run lint` → `npx tsc --noEmit` → `npx vitest run`.
 - **`npm run lint` already fails on main**: 8 pre-existing `@typescript-eslint/no-explicit-any`
-  errors in `src/app/api/auth/[...nextauth]/route.ts` + 4 warnings in
-  `SprintsTab.tsx`, `WorkItemCard.tsx`, `epicService.ts`. Don't "fix" them in unrelated
-  changes; just make sure you don't add new ones.
+  errors in `src/app/api/auth/[...nextauth]/route.ts` (plus warnings). Don't "fix" them in
+  unrelated changes; just make sure you don't add new errors.
+- Since `eslint-config-next@16.4.0`, `react-hooks/set-state-in-effect` is downgraded to
+  `warn` in `eslint.config.mjs`: the existing "reset state from props in an effect" patterns
+  predate the rule. New code should avoid that pattern.
 - `tsc --noEmit` and all 41 tests (5 files) pass clean on main.
 - There is no CI (`.github/` does not exist).
 
