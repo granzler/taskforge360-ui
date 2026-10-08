@@ -28,6 +28,8 @@ interface WorkItemFormProps {
     epics?: EpicResponseDto[];
     isSprintReadOnly?: boolean;
     isLoading: boolean;
+    embedded?: boolean;                 // Render inside a page/panel instead of a modal (no max-height scroll)
+    autoFocus?: boolean;                // Focus the title field on mount (default, useful for creation)
     showTypeSelector?: boolean;         // Show type selector (create mode)
     defaultType?: WorkItemType;         // Default type (for CreateTaskModal etc)
     onSubmit: (data: {
@@ -55,6 +57,8 @@ export default function WorkItemForm({
     epics = [],
     isSprintReadOnly = false,
     isLoading,
+    embedded = false,
+    autoFocus = true,
     showTypeSelector = true,
     defaultType = WorkItemType.Story,
     onSubmit,
@@ -148,7 +152,7 @@ export default function WorkItemForm({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className={`space-y-4 ${embedded ? '' : 'max-h-[70vh] overflow-y-auto'}`}>
             {/* Type Selector (shown in create mode) */}
             {showTypeSelector && (
                 <div className="space-y-1.5">
@@ -180,7 +184,7 @@ export default function WorkItemForm({
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder={isTask ? "Describe the task..." : "As a user, I want to..."}
-                        autoFocus
+                        autoFocus={autoFocus}
                         className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all placeholder:text-muted-foreground"
                     />
                 </div>

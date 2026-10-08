@@ -1,22 +1,33 @@
 'use client';
 
 import { useState, useRef, useEffect, memo } from 'react';
+import Link from 'next/link';
 import { Plus, Layers, Pencil, Mountain, ChevronDown, Loader2 } from 'lucide-react';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { WorkItemDto } from '@/domain/entities/WorkItem';
+import { Sprint } from '@/domain/entities/Sprint';
 import { getEpicPriorityColor, getStatusIcon } from '@/lib/utils/colors';
 import { Status, getWorkItemPriorityLabel, EpicStatus, EPIC_STATUS_LABELS, WORK_ITEM_STATUS_LABELS, WorkItemStatus, WorkItemType, WORK_ITEM_TYPE_LABELS } from '@/domain/types';
 import { EmptyState } from '@/components/ui';
+import QuickCreateItem from './QuickCreateItem';
+import CreateWorkItemPanel, { type CreateWorkItemTarget, focusCreateTrigger } from './CreateWorkItemPanel';
 
 interface EpicsTabProps {
+    projectId: number;
     epics: EpicResponseDto[];
     workItems: WorkItemDto[];               // replaces userStories
+    sprints: Sprint[];
     onCreateEpic: () => void;
     onEditEpic: (epic: EpicResponseDto) => void;
     onLinkStory?: (epicId: number, workItemId: number) => Promise<boolean>; // renamed param
+    onWorkItemCreated: (workItem: WorkItemDto) => void;
     canCreateEpic?: boolean;
     canUpdateEpic?: boolean;
     canLinkStory?: boolean;
+    canCreateStory?: boolean;
+    /** Shared single-open inline create form state (owned by the backlog page). */
+    creatingIn: CreateWorkItemTarget | null;
+    setCreatingIn: React.Dispatch<React.SetStateAction<CreateWorkItemTarget | null>>;
 }
 
 function EpicCard({ 
@@ -25,16 +36,30 @@ function EpicCard({
     onEditEpic, 
     onLinkStory,
     unlinkedStories,
+    projectId,
+    sprints,
+    epics,
+    onWorkItemCreated,
     canUpdateEpic = false,
     canLinkStory = false,
+    canCreateStory = false,
+    creatingIn,
+    setCreatingIn,
 }: { 
     epic: EpicResponseDto; 
     stories: WorkItemDto[];            // type changed
     onEditEpic: (epic: EpicResponseDto) => void;
     onLinkStory?: (epicId: number, workItemId: number) => Promise<boolean>;
     unlinkedStories: WorkItemDto[];    // type changed
+    projectId: number;
+    sprints: Sprint[];
+    epics: EpicResponseDto[];
+    onWorkItemCreated: (workItem: WorkItemDto) => void;
     canUpdateEpic?: boolean;
     canLinkStory?: boolean;
+    canCreateStory?: boolean;
+    creatingIn: CreateWorkItemTarget | null;
+    setCreatingIn: React.Dispatch<React.SetStateAction<CreateWorkItemTarget | null>>;
 }) {
     const [showDropdown, setShowDropdown] = useState(false);
     const [linkingStoryId, setLinkingStoryId] = useState<number | null>(null);
@@ -121,7 +146,13 @@ function EpicCard({
                         return (
                             <div key={s.id} className="flex items-center gap-2 p-2 rounded-md bg-background border border-border/50 text-xs">
                                 {getStatusIcon((WORK_ITEM_STATUS_LABELS[s.statusId as WorkItemStatus] || s.statusName || 'To Do') as Status)}
-                                <span className="truncate flex-1">{s.title}</span>
+                                <Link
+                                    href={`/workitems/${s.id}`}
+                                    title={s.title}
+                                    className="truncate flex-1 hover:text-primary hover:underline underline-offset-2 transition-colors"
+                                >
+                                    {s.title}
+                                </Link>
                                 {typeLabel && (
                                     <span className="text-[9px] font-semibold uppercase px-1 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                                         {typeLabel}
@@ -171,12 +202,59 @@ function EpicCard({
                         </div>
                     )}
                 </div>
+
+                {canCreateStory && (
+                    <div className="mt-3 space-y-3">
+                        <QuickCreateItem
+                            projectId={projectId}
+                            parentId={epic.id}
+                            label={epic.title}
+                            onCreated={onWorkItemCreated}
+                            onAdvanced={() => setCreatingIn({ scope: 'epic', id: epic.id })}
+                            advancedActive={creatingIn?.scope === 'epic' && creatingIn.id === epic.id}
+                            triggerKey={`epic-${epic.id}`}
+                        />
+                        {creatingIn?.scope === 'epic' && creatingIn.id === epic.id && (
+                            <CreateWorkItemPanel
+                                projectId={projectId}
+                                sprints={sprints}
+                                epics={epics}
+                                epicId={epic.id}
+                                subtitle={epic.title}
+                                onClose={() => {
+                                    setCreatingIn(null);
+                                    focusCreateTrigger(`epic-${epic.id}`);
+                                }}
+                                onCreated={(workItem) => {
+                                    setCreatingIn(null);
+                                    focusCreateTrigger(`epic-${epic.id}`);
+                                    onWorkItemCreated(workItem);
+                                }}
+                            />
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-const EpicsTab = memo(function EpicsTab({ epics, workItems, onCreateEpic, onEditEpic, onLinkStory, canCreateEpic = false, canUpdateEpic = false, canLinkStory = false }: EpicsTabProps) {
+const EpicsTab = memo(function EpicsTab({
+    projectId,
+    epics,
+    workItems,
+    sprints,
+    onCreateEpic,
+    onEditEpic,
+    onLinkStory,
+    onWorkItemCreated,
+    canCreateEpic = false,
+    canUpdateEpic = false,
+    canLinkStory = false,
+    canCreateStory = false,
+    creatingIn,
+    setCreatingIn,
+}: EpicsTabProps) {
     if (epics.length === 0) {
         return (
             <EmptyState
@@ -225,8 +303,15 @@ const EpicsTab = memo(function EpicsTab({ epics, workItems, onCreateEpic, onEdit
                     onEditEpic={onEditEpic}
                     onLinkStory={onLinkStory}
                     unlinkedStories={unlinkedWorkItems}
+                    projectId={projectId}
+                    sprints={sprints}
+                    epics={epics}
+                    onWorkItemCreated={onWorkItemCreated}
                     canUpdateEpic={canUpdateEpic}
                     canLinkStory={canLinkStory}
+                    canCreateStory={canCreateStory}
+                    creatingIn={creatingIn}
+                    setCreatingIn={setCreatingIn}
                 />
             ))}
 

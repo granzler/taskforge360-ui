@@ -15,7 +15,7 @@ import { SkeletonCard } from '@/components/ui';
 import SprintsTab from '@/features/backlog/components/SprintsTab';
 import EpicsTab from '@/features/backlog/components/EpicsTab';
 import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
-import CreateWorkItemModal from '@/features/backlog/components/CreateWorkItemModal';
+import CreateWorkItemPanel, { type CreateWorkItemTarget, focusCreateTrigger } from '@/features/backlog/components/CreateWorkItemPanel';
 import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
 import { notifyResult } from '@/lib/utils/notify';
@@ -37,7 +37,7 @@ export default function BacklogPage() {
 
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreateEpicModal, setShowCreateEpicModal] = useState(false);
-    const [showCreateWorkItemModal, setShowCreateWorkItemModal] = useState(false);
+    const [creatingIn, setCreatingIn] = useState<CreateWorkItemTarget | null>(null);
     const [editingEpic, setEditingEpic] = useState<EpicResponseDto | null>(null);
 
     const { data: sprints = [], isLoading: isLoadingSprints } = useSprints(projectId);
@@ -66,7 +66,15 @@ export default function BacklogPage() {
 
     const handleWorkItemCreated = (workItemId?: number) => {
         if (workItemId) invalidateAll();
-        setShowCreateWorkItemModal(false);
+    };
+
+    const handleQuickCreated = (_workItem: WorkItemDto) => {
+        invalidateAll();
+    };
+
+    const closeTopCreatePanel = () => {
+        setCreatingIn(null);
+        focusCreateTrigger('top');
     };
 
     const handleWorkItemUpdated = async (_updatedWorkItem: WorkItemDto) => {
@@ -161,6 +169,8 @@ export default function BacklogPage() {
                 canDeleteSprint={canDeleteSprint}
                 canCreateStory={canCreateStory}
                 canUpdateStory={canUpdateStory}
+                creatingIn={creatingIn}
+                setCreatingIn={setCreatingIn}
             />
         );
     };
@@ -192,8 +202,10 @@ export default function BacklogPage() {
                         )}
                         {canCreateStory && (
                             <button
-                                onClick={() => setShowCreateWorkItemModal(true)}
+                                data-create-trigger="top"
+                                onClick={() => setCreatingIn(prev => (prev?.scope === 'top' ? null : { scope: 'top' }))}
                                 disabled={!selectedProject}
+                                aria-expanded={creatingIn?.scope === 'top'}
                                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 <Plus size={18} />
@@ -239,6 +251,23 @@ export default function BacklogPage() {
                     id={activeTab === 'sprints' ? 'tabpanel-sprints' : 'tabpanel-epics'}
                     aria-labelledby={activeTab === 'sprints' ? 'tab-sprints' : 'tab-epics'}
                 >
+                    {creatingIn?.scope === 'top' && selectedProject && (
+                        <div className="mb-6">
+                            <CreateWorkItemPanel
+                                projectId={selectedProject.id}
+                                sprints={sprints}
+                                epics={epics}
+                                subtitle={selectedProject.name}
+                                onClose={closeTopCreatePanel}
+                                onCreated={() => {
+                                    invalidateAll();
+                                    setCreatingIn(null);
+                                    focusCreateTrigger('top');
+                                }}
+                            />
+                        </div>
+                    )}
+
                     {activeTab === 'sprints' ? renderSprintsContent() : (
                         isLoadingEpics ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -248,14 +277,20 @@ export default function BacklogPage() {
                             </div>
                         ) : (
                             <EpicsTab
+                                projectId={selectedProject?.id ?? 0}
                                 epics={epics}
                                 workItems={workItems}
+                                sprints={sprints}
                                 onCreateEpic={() => setShowCreateEpicModal(true)}
                                 onEditEpic={setEditingEpic}
                                 onLinkStory={handleLinkStory}
+                                onWorkItemCreated={handleQuickCreated}
                                 canCreateEpic={canCreateEpic}
                                 canUpdateEpic={canUpdateEpic}
                                 canLinkStory={canUpdateStory}
+                                canCreateStory={canCreateStory}
+                                creatingIn={creatingIn}
+                                setCreatingIn={setCreatingIn}
                             />
                         )
                     )}
@@ -308,17 +343,6 @@ export default function BacklogPage() {
                     onClose={() => setEditingEpic(null)}
                     onCreated={() => {}}
                     onUpdated={handleEpicUpdated}
-                />
-            )}
-
-            {showCreateWorkItemModal && selectedProject && (
-                <CreateWorkItemModal
-                    projectId={selectedProject.id}
-                    projectName={selectedProject.name}
-                    sprints={sprints}
-                    epics={epics}
-                    onClose={() => setShowCreateWorkItemModal(false)}
-                    onCreated={handleWorkItemCreated}
                 />
             )}
         </>

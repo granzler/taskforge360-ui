@@ -13,7 +13,7 @@ import {
     useDroppable,
     useDraggable,
 } from '@dnd-kit/core';
-import { ChevronDown, ChevronRight, Plus, MoreVertical, Trash2, Loader2, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, MoreVertical, Trash2, Loader2, GripVertical } from 'lucide-react';
 import { SubTask, Epic } from '@/domain/entities/Project';
 import { WorkItemDto } from '@/domain/entities/WorkItem';
 import { UpdateWorkItemRequestDto } from '@/domain/entities/WorkItem';
@@ -24,8 +24,8 @@ import { sprintService } from '@/infrastructure/services/sprintService';
 import { toast } from 'react-hot-toast';
 import { notifyResult } from '@/lib/utils/notify';
 import WorkItemCard, { type WorkItemCardProps } from './WorkItemCard';
-import CreateWorkItemModal from './CreateWorkItemModal';
-import EditWorkItemModal from './EditWorkItemModal';
+import QuickCreateItem from './QuickCreateItem';
+import CreateWorkItemPanel, { type CreateWorkItemTarget, focusCreateTrigger } from './CreateWorkItemPanel';
 
 type EpicItem = Epic | EpicResponseDto;
 
@@ -47,9 +47,12 @@ interface SprintsTabProps {
     canDeleteSprint?: boolean;
     canCreateStory?: boolean;
     canUpdateStory?: boolean;
+    /** Shared single-open inline create form state (owned by the backlog page). */
+    creatingIn: CreateWorkItemTarget | null;
+    setCreatingIn: React.Dispatch<React.SetStateAction<CreateWorkItemTarget | null>>;
 }
 
-function DraggableWorkItem({ workItem, ...rest }: { workItem: WorkItemDto } & Pick<WorkItemCardProps, 'isExpanded' | 'onToggle' | 'onEdit' | 'tasks' | 'epic' | 'canUpdateStory'>) {
+function DraggableWorkItem({ workItem, ...rest }: { workItem: WorkItemDto } & Pick<WorkItemCardProps, 'isExpanded' | 'onToggle' | 'tasks' | 'epic' | 'canUpdateStory'>) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: `workitem-${workItem.id}`,
         data: { workItem },
@@ -103,6 +106,8 @@ const SprintsTab = memo(function SprintsTab({
     canDeleteSprint = false,
     canCreateStory = false,
     canUpdateStory = false,
+    creatingIn,
+    setCreatingIn,
 }: SprintsTabProps) {
     const [expandedSprints, setExpandedSprints] = useState<number[]>([1, 2]);
     const [expandedWorkItems, setExpandedWorkItems] = useState<number[]>([]);
@@ -111,10 +116,6 @@ const SprintsTab = memo(function SprintsTab({
     const [menuOpenSprintId, setMenuOpenSprintId] = useState<number | null>(null);
     const [sprintToDelete, setSprintToDelete] = useState<Sprint | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [createModalSprintId, setCreateModalSprintId] = useState<number | undefined>(undefined);
-    const [editingWorkItem, setEditingWorkItem] = useState<WorkItemDto | null>(null);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -132,6 +133,16 @@ const SprintsTab = memo(function SprintsTab({
         setExpandedWorkItems(prev =>
             prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
         );
+    };
+
+    const closeCreatePanel = (triggerKey: string) => {
+        setCreatingIn(null);
+        focusCreateTrigger(triggerKey);
+    };
+
+    /** Quick creation keeps any open full form untouched. */
+    const handleQuickCreated = (workItem: WorkItemDto) => {
+        onWorkItemCreated(workItem.id);
     };
 
     const workItemsBySprint: SprintWithStories[] = sprints.map(sprint => {
@@ -314,7 +325,6 @@ const SprintsTab = memo(function SprintsTab({
                                             workItem={workItem}
                                             isExpanded={expandedWorkItems.includes(workItem.id)}
                                             onToggle={toggleWorkItem}
-                                            onEdit={(workItem: WorkItemDto) => setEditingWorkItem(workItem)}
                                             tasks={[]}  // Tasks loaded separately or via parent context
                                             epic={epics.find(e => e.id === workItem.parentId)}
                                             canUpdateStory={canUpdateStory}
@@ -326,15 +336,32 @@ const SprintsTab = memo(function SprintsTab({
                                     </div>
                                 )}
                                 {canCreateStory && (
-                                    <button
-                                        className="w-full mt-4 flex items-center justify-center gap-2 py-2 border border-dashed border-border rounded-lg text-xs font-medium text-slate-500 hover:bg-accent/5 hover:text-primary transition-all"
-                                        onClick={() => {
-                                            setCreateModalSprintId(sprint.id);
-                                            setShowCreateModal(true);
-                                        }}
-                                    >
-                                        <Plus size={14} /> Add Work Item
-                                    </button>
+                                    <div className="mt-4 space-y-3">
+                                        <QuickCreateItem
+                                            projectId={projectId}
+                                            sprintId={sprint.id}
+                                            label={sprint.name}
+                                            onCreated={handleQuickCreated}
+                                            onAdvanced={() => setCreatingIn({ scope: 'sprint', id: sprint.id })}
+                                            advancedActive={creatingIn?.scope === 'sprint' && creatingIn.id === sprint.id}
+                                            triggerKey={`sprint-${sprint.id}`}
+                                        />
+                                        {creatingIn?.scope === 'sprint' && creatingIn.id === sprint.id && (
+                                            <CreateWorkItemPanel
+                                                projectId={projectId}
+                                                sprints={sprints}
+                                                epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
+                                                sprintId={sprint.id}
+                                                subtitle={`${sprint.name} · ${projectName}`}
+                                                onClose={() => closeCreatePanel(`sprint-${sprint.id}`)}
+                                                onCreated={(workItem) => {
+                                                    setCreatingIn(null);
+                                                    focusCreateTrigger(`sprint-${sprint.id}`);
+                                                    onWorkItemCreated(workItem.id);
+                                                }}
+                                            />
+                                        )}
+                                    </div>
                                 )}
                             </DroppableZone>
                         )}
@@ -366,7 +393,6 @@ const SprintsTab = memo(function SprintsTab({
                                 workItem={workItem}
                                 isExpanded={expandedWorkItems.includes(workItem.id)}
                                 onToggle={toggleWorkItem}
-                                onEdit={(workItem: WorkItemDto) => setEditingWorkItem(workItem)}
                                 tasks={[]}
                                 epic={epics.find(e => e.id === workItem.parentId)}
                                 canUpdateStory={canUpdateStory}
@@ -375,6 +401,33 @@ const SprintsTab = memo(function SprintsTab({
                     ) : (
                         <div className="text-center py-6 text-slate-500 text-sm italic">
                             No unassigned items in backlog.
+                        </div>
+                    )}
+
+                    {canCreateStory && (
+                        <div className="mt-4 space-y-3">
+                            <QuickCreateItem
+                                projectId={projectId}
+                                label="the backlog"
+                                onCreated={handleQuickCreated}
+                                onAdvanced={() => setCreatingIn({ scope: 'backlog' })}
+                                advancedActive={creatingIn?.scope === 'backlog'}
+                                triggerKey="backlog"
+                            />
+                            {creatingIn?.scope === 'backlog' && (
+                                <CreateWorkItemPanel
+                                    projectId={projectId}
+                                    sprints={sprints}
+                                    epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
+                                    subtitle={projectName}
+                                    onClose={() => closeCreatePanel('backlog')}
+                                    onCreated={(workItem) => {
+                                        setCreatingIn(null);
+                                        focusCreateTrigger('backlog');
+                                        onWorkItemCreated(workItem.id);
+                                    }}
+                                />
+                            )}
                         </div>
                     )}
                 </DroppableZone>
@@ -424,38 +477,6 @@ const SprintsTab = memo(function SprintsTab({
                         </div>
                     </div>
                 </div>
-            )}
-
-            {/* Create Work Item Modal */}
-            {showCreateModal && (
-                <CreateWorkItemModal
-                    projectId={projectId}
-                    projectName={projectName}
-                    sprints={sprints}
-                    epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
-                    sprintId={createModalSprintId}
-                    onClose={() => setShowCreateModal(false)}
-                    onCreated={(workItemId) => {
-                        setShowCreateModal(false);
-                        if (workItemId) {
-                            onWorkItemCreated(workItemId);
-                        }
-                    }}
-                />
-            )}
-
-            {/* Edit Work Item Modal */}
-            {editingWorkItem && (
-                <EditWorkItemModal
-                    workItem={editingWorkItem}
-                    isOpen={!!editingWorkItem}
-                    onClose={() => setEditingWorkItem(null)}
-                    onUpdated={(workItem) => {
-                        onWorkItemUpdated?.(workItem);
-                    }}
-                    sprints={sprints}
-                    epics={epics.filter((e): e is EpicResponseDto => 'title' in e)}
-                />
             )}
         </DndContext>
     );

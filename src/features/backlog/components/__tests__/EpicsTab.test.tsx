@@ -3,6 +3,16 @@ import { render, screen } from '@testing-library/react';
 import EpicsTab from '../EpicsTab';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { WorkItemDto } from '@/domain/entities/WorkItem';
+import type { CreateWorkItemTarget } from '../CreateWorkItemPanel';
+
+/** New inline-creation props, defaults keep the existing behaviour unchanged. */
+const epicsTabDefaults = {
+  projectId: 1,
+  sprints: [],
+  onWorkItemCreated: vi.fn(),
+  creatingIn: null as CreateWorkItemTarget | null,
+  setCreatingIn: vi.fn(),
+};
 
 const mockEpic: EpicResponseDto = {
   id: 1,
@@ -50,6 +60,7 @@ describe('EpicsTab', () => {
   it('should render epic title and description', () => {
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[mockEpic]}
         workItems={[]}
         onCreateEpic={vi.fn()}
@@ -64,6 +75,7 @@ describe('EpicsTab', () => {
   it('should render empty state when no epics', () => {
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[]}
         workItems={[]}
         onCreateEpic={vi.fn()}
@@ -79,6 +91,7 @@ describe('EpicsTab', () => {
   it('should show linked items', () => {
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[mockEpic]}
         workItems={[mockLinkedItem]}
         onCreateEpic={vi.fn()}
@@ -93,6 +106,7 @@ describe('EpicsTab', () => {
   it('should show no items linked message when empty', () => {
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[mockEpic]}
         workItems={[]}
         onCreateEpic={vi.fn()}
@@ -114,6 +128,7 @@ describe('EpicsTab', () => {
 
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[mockEpic]}
         workItems={[mockLinkedItem, inProgressItem]}
         onCreateEpic={vi.fn()}
@@ -127,6 +142,7 @@ describe('EpicsTab', () => {
   it('should show story points in the count', () => {
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[mockEpic]}
         workItems={[mockLinkedItem]}
         onCreateEpic={vi.fn()}
@@ -140,6 +156,7 @@ describe('EpicsTab', () => {
   it('should show Link Item button when onLinkStory is provided and there are unlinked items', () => {
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[mockEpic]}
         workItems={[mockUnlinkedItem]}
         onCreateEpic={vi.fn()}
@@ -155,6 +172,7 @@ describe('EpicsTab', () => {
   it('should show no items available when all items are linked', () => {
     render(
       <EpicsTab
+        {...epicsTabDefaults}
         epics={[mockEpic]}
         workItems={[mockLinkedItem]}
         onCreateEpic={vi.fn()}

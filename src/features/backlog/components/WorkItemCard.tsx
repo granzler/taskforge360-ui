@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, memo } from 'react';
-import { ChevronDown, ChevronRight, Target, User, Plus, Pencil, Loader2, Check, X, Layers } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronDown, ChevronRight, Target, User, Plus, Loader2, Check, X, Layers } from 'lucide-react';
 import { Epic, SubTask } from '@/domain/entities/Project';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { WorkItemDto } from '@/domain/entities/WorkItem';
@@ -17,7 +18,6 @@ interface WorkItemCardProps {
     workItem: WorkItemDto;
     isExpanded: boolean;
     onToggle: (id: number) => void;
-    onEdit?: (workItem: WorkItemDto) => void;
     tasks?: WorkItemDto[];                     // Child tasks (replaces subtasks)
     epic?: Epic | EpicResponseDto;
     canUpdateStory?: boolean;
@@ -28,7 +28,6 @@ const WorkItemCard = memo(function WorkItemCard({
     workItem,
     isExpanded,
     onToggle,
-    onEdit,
     tasks = [],
     epic,
     canUpdateStory = false,
@@ -83,7 +82,14 @@ const WorkItemCard = memo(function WorkItemCard({
                     </div>
                     {getStatusIcon((WORK_ITEM_STATUS_LABELS[workItem.statusId as WorkItemStatus] || 'To Do') as Status)}
                     <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                        <span className="font-medium text-sm truncate">{workItem.title}</span>
+                        <Link
+                            href={`/workitems/${workItem.id}`}
+                            title={workItem.title}
+                            onClick={e => e.stopPropagation()}
+                            className="font-medium text-sm truncate hover:text-primary hover:underline underline-offset-2 transition-colors"
+                        >
+                            {workItem.title}
+                        </Link>
                         <div className="flex flex-wrap gap-1 items-center">
                             {!isTask && (
                                 <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
@@ -197,18 +203,6 @@ const WorkItemCard = memo(function WorkItemCard({
                                 <Plus size={10} /> Add Task
                             </button>
                         )
-                    )}
-
-                    {onEdit && canUpdateStory && !isTask && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(workItem);
-                            }}
-                            className="flex items-center gap-1.5 text-[10px] font-medium text-primary hover:underline mt-1 pl-1"
-                        >
-                            <Pencil size={10} /> Edit {typeLabel}
-                        </button>
                     )}
                 </div>
             )}

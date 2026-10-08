@@ -44,6 +44,7 @@ export const config = {
     "/admin/:path*",
     "/projects/:path*",
     "/backlog/:path*",
+    "/workitems/:path*",
     "/settings/:path*",
   ],
 };
