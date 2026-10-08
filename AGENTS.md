@@ -89,3 +89,13 @@ npx vitest --ui        # Vitest UI
   into `npx tsc --noEmit && npx vitest run && git push ...`, so pushes only happen when
   typecheck and tests are green. Lint is excluded on purpose until its pre-existing
   baseline is fixed; edit the `VERIFY` constant in the plugin to change the chain.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
