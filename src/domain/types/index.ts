@@ -20,10 +20,19 @@ export const getWorkItemPriorityLabel = (priority: number | string | undefined):
     return WORK_ITEM_PRIORITY_LABELS[priority as WorkItemPriority] ?? 'Medium';
 };
 
-export type Status = 'To Do' | 'In Progress' | 'Review' | 'Done';
+/**
+ * Display status of a work item. Kept as a union so callers can pass a status
+ * label straight to `getStatusIcon`. Includes the Epic flow, the shared child
+ * flow (Story/Bug/Spike/Task) and a couple of legacy values.
+ */
+export type Status =
+    | 'Backlog' | 'To Do' | 'In Progress' | 'Ready for Review' | 'In Review'
+    | 'Needs Revision' | 'Ready for Test' | 'In Test' | 'Done' | 'Blocked'
+    | 'Review' | 'Cancelled';
 
 // ─── WorkItemType Enum ──────────────────────────────────────────
 export enum WorkItemType {
+    Epic = 0,       // Epics live in their own controller; the value mirrors the backend enum
     Story = 1,
     Task = 2,
     Bug = 3,
@@ -31,12 +40,14 @@ export enum WorkItemType {
 }
 
 export const WORK_ITEM_TYPE_LABELS: Record<WorkItemType, string> = {
+    [WorkItemType.Epic]: 'Epic',
     [WorkItemType.Story]: 'Story',
     [WorkItemType.Task]: 'Task',
     [WorkItemType.Bug]: 'Bug',
     [WorkItemType.Spike]: 'Spike',
 };
 
+/** Options for creating/editing work items — Epics are handled by their own form. */
 export const WORK_ITEM_TYPE_OPTIONS = [
     { id: WorkItemType.Story, label: 'Story' },
     { id: WorkItemType.Task, label: 'Task' },
@@ -70,39 +81,45 @@ export const EPIC_STATUS_OPTIONS = [
 ];
 
 // ─── WorkItem Status (shared by Story, Bug, Spike, Task) ────────
+// Ids match the seeded rows in the backend WorkItemStatus table
+// (TaskForge360.Data/Entities/Mappings/WorkItemStatusMap.cs).
 export enum WorkItemStatus {
     Backlog = 6,
     ToDo = 7,
     InProgress = 8,
-    InReview = 9,
-    Testing = 10,
-    Deploying = 11,
-    ReadyForTesting = 12,
-    // ID 13 (Refinement) — REMOVED by backend
+    ReadyForReview = 9,
+    InReview = 10,
+    NeedsRevision = 11,
+    ReadyForTest = 12,
+    InTest = 13,
     Done = 14,
-    // ID 15 (Cancelled) — REMOVED by backend
+    Blocked = 15,
 }
 
 export const WORK_ITEM_STATUS_LABELS: Record<WorkItemStatus, string> = {
     [WorkItemStatus.Backlog]: 'Backlog',
     [WorkItemStatus.ToDo]: 'To Do',
     [WorkItemStatus.InProgress]: 'In Progress',
+    [WorkItemStatus.ReadyForReview]: 'Ready for Review',
     [WorkItemStatus.InReview]: 'In Review',
-    [WorkItemStatus.Testing]: 'Testing',
-    [WorkItemStatus.Deploying]: 'Deploying',
-    [WorkItemStatus.ReadyForTesting]: 'Ready for Testing',
+    [WorkItemStatus.NeedsRevision]: 'Needs Revision',
+    [WorkItemStatus.ReadyForTest]: 'Ready for Test',
+    [WorkItemStatus.InTest]: 'In Test',
     [WorkItemStatus.Done]: 'Done',
+    [WorkItemStatus.Blocked]: 'Blocked',
 };
 
 export const WORK_ITEM_STATUS_OPTIONS = [
     { id: WorkItemStatus.Backlog, label: 'Backlog' },
     { id: WorkItemStatus.ToDo, label: 'To Do' },
     { id: WorkItemStatus.InProgress, label: 'In Progress' },
+    { id: WorkItemStatus.ReadyForReview, label: 'Ready for Review' },
     { id: WorkItemStatus.InReview, label: 'In Review' },
-    { id: WorkItemStatus.Testing, label: 'Testing' },
-    { id: WorkItemStatus.Deploying, label: 'Deploying' },
-    { id: WorkItemStatus.ReadyForTesting, label: 'Ready for Testing' },
+    { id: WorkItemStatus.NeedsRevision, label: 'Needs Revision' },
+    { id: WorkItemStatus.ReadyForTest, label: 'Ready for Test' },
+    { id: WorkItemStatus.InTest, label: 'In Test' },
     { id: WorkItemStatus.Done, label: 'Done' },
+    { id: WorkItemStatus.Blocked, label: 'Blocked' },
 ];
 
 // ─── Backward-compat aliases ────────────────────────────────────

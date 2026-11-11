@@ -3,6 +3,7 @@ import { Result } from '@/domain/types';
 import { handleApiCall } from '../api/apiHelper';
 import {
     WorkItemDto,
+    WorkItemStatusDto,
     CreateWorkItemRequestDto,
     UpdateWorkItemRequestDto,
 } from '@/domain/entities/WorkItem';
@@ -85,12 +86,20 @@ export const workItemService = {
         });
     },
 
-    // ─── Task-specific (children of a parent work item) ─────────
+    // ─── Child work items (subtasks) of a parent ────────────────
     getTasksByParent: (parentId: number): Promise<Result<WorkItemDto[]>> => {
         return handleApiCall(async () => {
-            const response = await api.get<WorkItemDto[]>('/api/workitems', {
-                params: { type: 'task', parentId },
+            const response = await api.get<WorkItemDto[]>(`/api/workitems/parent/${parentId}`, {
+                params: { type: 'task' },
             });
+            return response.data;
+        });
+    },
+
+    // ─── Status lookup (seeded WorkItemStatus rows) ─────────────
+    getStatuses: (): Promise<Result<WorkItemStatusDto[]>> => {
+        return handleApiCall(async () => {
+            const response = await api.get<WorkItemStatusDto[]>('/api/workitems/statuses');
             return response.data;
         });
     },

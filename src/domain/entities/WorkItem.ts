@@ -48,7 +48,6 @@ export interface WorkItemDto {
     projectName?: string;
     statusId: number;
     statusName: string;
-    statusCategory?: string;          // NEW
     storyPoints?: number;
     sprintId?: number;
     sprintName?: string;
@@ -60,5 +59,15 @@ export interface WorkItemDto {
     createdAt?: string;                // NEW
     createdBy?: string;                // NEW
     updatedAt?: string;                // NEW
+    concurrencyVersion: number;
+}
+
+// ─── Status lookup ──────────────────────────────────────────────
+/** Row of the backend WorkItemStatus lookup table (seeded data). */
+export interface WorkItemStatusDto {
+    id: number;
+    name: string;
+    /** Epic statuses (1-5) apply to Epics; the rest are shared by Story/Bug/Spike/Task. */
+    workItemType: WorkItemType;
     concurrencyVersion: number;
 }

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ReactElement } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WorkItemForm from '../WorkItemForm';
@@ -7,6 +9,14 @@ vi.mock('@/infrastructure/services/projectService', () => ({
   projectService: {
     getProjectUsers: vi.fn().mockResolvedValue({ success: true, data: [] }),
     searchUsers: vi.fn().mockResolvedValue({ success: true, data: [] }),
+  },
+}));
+
+// WorkItemForm reads the status lookup from the API; an empty response makes
+// it fall back to the local WORK_ITEM_STATUS_OPTIONS list.
+vi.mock('@/infrastructure/services/workItemService', () => ({
+  workItemService: {
+    getStatuses: vi.fn().mockResolvedValue({ success: true, data: [] }),
   },
 }));
 
@@ -42,8 +52,20 @@ describe('WorkItemForm', () => {
     vi.clearAllMocks();
   });
 
+  /** WorkItemForm uses TanStack Query for the status lookup. */
+  const renderForm = (ui: ReactElement) =>
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        {ui}
+      </QueryClientProvider>
+    );
+
   it('should render form with all fields', () => {
-    render(<WorkItemForm {...defaultProps} />);
+    renderForm(<WorkItemForm {...defaultProps} />);
 
     expect(screen.getByLabelText(/title/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
@@ -57,7 +79,7 @@ describe('WorkItemForm', () => {
   });
 
   it('should render type selector when showTypeSelector is true', () => {
-    render(<WorkItemForm {...defaultProps} showTypeSelector={true} />);
+    renderForm(<WorkItemForm {...defaultProps} showTypeSelector={true} />);
 
     expect(screen.getByLabelText(/type/i)).toBeInTheDocument();
   });
@@ -73,7 +95,7 @@ describe('WorkItemForm', () => {
       parentId: 2,
     };
 
-    render(<WorkItemForm {...defaultProps} initialData={initialData} />);
+    renderForm(<WorkItemForm {...defaultProps} initialData={initialData} />);
 
     expect(screen.getByDisplayValue('Initial Title')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Initial Description')).toBeInTheDocument();
@@ -82,14 +104,14 @@ describe('WorkItemForm', () => {
   });
 
   it('should validate title is required', () => {
-    render(<WorkItemForm {...defaultProps} />);
+    renderForm(<WorkItemForm {...defaultProps} />);
 
     const submitButton = screen.getByRole('button', { name: 'Submit' });
     expect(submitButton).toBeDisabled();
   });
 
   it('should enable submit when title is filled', async () => {
-    render(<WorkItemForm {...defaultProps} />);
+    renderForm(<WorkItemForm {...defaultProps} />);
 
     const titleInput = screen.getByLabelText(/title/i);
     await userEvent.type(titleInput, 'New Item');
@@ -101,7 +123,7 @@ describe('WorkItemForm', () => {
   it('should call onSubmit with form data', async () => {
     const onSubmit = vi.fn();
 
-    render(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
+    renderForm(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
 
     const titleInput = screen.getByLabelText(/title/i);
     await userEvent.type(titleInput, 'New Item');
@@ -124,7 +146,7 @@ describe('WorkItemForm', () => {
   it('should call onCancel when cancel clicked', async () => {
     const onCancel = vi.fn();
 
-    render(<WorkItemForm {...defaultProps} onCancel={onCancel} />);
+    renderForm(<WorkItemForm {...defaultProps} onCancel={onCancel} />);
 
     const cancelButton = screen.getByRole('button', { name: 'Cancel' });
     await userEvent.click(cancelButton);
@@ -133,7 +155,7 @@ describe('WorkItemForm', () => {
   });
 
   it('should show loading state', () => {
-    render(<WorkItemForm {...defaultProps} isLoading={true} submitLabel="Saving..." />);
+    renderForm(<WorkItemForm {...defaultProps} isLoading={true} submitLabel="Saving..." />);
 
     expect(screen.getByText('Saving...')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
@@ -141,7 +163,7 @@ describe('WorkItemForm', () => {
 
   it('should show read-only sprint when isSprintReadOnly', () => {
     const sprints = [{ id: 1, name: 'Sprint 1', status: { name: 'Active' } }] as never[];
-    render(
+    renderForm(
       <WorkItemForm
         {...defaultProps}
         isSprintReadOnly={true}
@@ -156,7 +178,7 @@ describe('WorkItemForm', () => {
   it('should include labelIds in submit data when labels are selected', async () => {
     const onSubmit = vi.fn();
 
-    render(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
+    renderForm(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
 
     const titleInput = screen.getByLabelText(/title/i);
     await userEvent.type(titleInput, 'Test Item');
@@ -179,7 +201,7 @@ describe('WorkItemForm', () => {
   it('should include assignedTo field in submit data', async () => {
     const onSubmit = vi.fn();
 
-    render(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
+    renderForm(<WorkItemForm {...defaultProps} onSubmit={onSubmit} />);
 
     const titleInput = screen.getByLabelText(/title/i);
     await userEvent.type(titleInput, 'Test Item');

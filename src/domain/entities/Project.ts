@@ -57,17 +57,3 @@ export interface Epic {
     assigneeId?: string;
     concurrencyVersion: number;
 }
-
-/** @deprecated Use WorkItem (type: Task) instead. Kept for backward compat during migration. */
-export interface SubTask {
-    id: number;
-    title: string;
-    description: string;
-    priority: Priority;
-    status: Status;
-    startDate?: string;
-    endDate?: string;
-    parentId: number;           // renamed from userStoryId
-    assigneeId?: string;
-    concurrencyVersion: number;
-}

@@ -14,7 +14,7 @@ import {
     useDraggable,
 } from '@dnd-kit/core';
 import { ChevronDown, ChevronRight, MoreVertical, Trash2, Loader2, GripVertical } from 'lucide-react';
-import { SubTask, Epic } from '@/domain/entities/Project';
+import { Epic } from '@/domain/entities/Project';
 import { WorkItemDto } from '@/domain/entities/WorkItem';
 import { UpdateWorkItemRequestDto } from '@/domain/entities/WorkItem';
 import { EpicResponseDto } from '@/domain/entities/Epic';
@@ -39,20 +39,18 @@ interface SprintsTabProps {
     projectName: string;
     sprints: Sprint[];
     workItems: WorkItemDto[];                       // renamed from userStories
-    tasks: SubTask[];                                // kept for backward compat
     epics: EpicItem[];
     onSprintDeleted: (sprintId: number) => void;
     onWorkItemCreated: (workItemId: number) => void;  // renamed from onStoryCreated
     onWorkItemUpdated?: (workItem: WorkItemDto) => void; // renamed from onStoryUpdated
     canDeleteSprint?: boolean;
     canCreateStory?: boolean;
-    canUpdateStory?: boolean;
     /** Shared single-open inline create form state (owned by the backlog page). */
     creatingIn: CreateWorkItemTarget | null;
     setCreatingIn: React.Dispatch<React.SetStateAction<CreateWorkItemTarget | null>>;
 }
 
-function DraggableWorkItem({ workItem, ...rest }: { workItem: WorkItemDto } & Pick<WorkItemCardProps, 'isExpanded' | 'onToggle' | 'tasks' | 'epic' | 'canUpdateStory'>) {
+function DraggableWorkItem({ workItem, ...rest }: { workItem: WorkItemDto } & Pick<WorkItemCardProps, 'isExpanded' | 'onToggle' | 'epic'>) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: `workitem-${workItem.id}`,
         data: { workItem },
@@ -98,14 +96,12 @@ const SprintsTab = memo(function SprintsTab({
     projectName,
     sprints,
     workItems,
-    tasks,
     epics,
     onSprintDeleted,
     onWorkItemCreated,
     onWorkItemUpdated,
     canDeleteSprint = false,
     canCreateStory = false,
-    canUpdateStory = false,
     creatingIn,
     setCreatingIn,
 }: SprintsTabProps) {
@@ -325,9 +321,7 @@ const SprintsTab = memo(function SprintsTab({
                                             workItem={workItem}
                                             isExpanded={expandedWorkItems.includes(workItem.id)}
                                             onToggle={toggleWorkItem}
-                                            tasks={[]}  // Tasks loaded separately or via parent context
                                             epic={epics.find(e => e.id === workItem.parentId)}
-                                            canUpdateStory={canUpdateStory}
                                         />
                                     ))
                                 ) : (
@@ -393,9 +387,7 @@ const SprintsTab = memo(function SprintsTab({
                                 workItem={workItem}
                                 isExpanded={expandedWorkItems.includes(workItem.id)}
                                 onToggle={toggleWorkItem}
-                                tasks={[]}
                                 epic={epics.find(e => e.id === workItem.parentId)}
-                                canUpdateStory={canUpdateStory}
                             />
                         ))
                     ) : (

@@ -161,14 +161,12 @@ export default function BacklogPage() {
                 projectName={selectedProject.name}
                 sprints={sprints}
                 workItems={workItems}
-                tasks={[]}
                 epics={epics}
                 onSprintDeleted={handleSprintDeleted}
                 onWorkItemCreated={handleWorkItemCreated}
                 onWorkItemUpdated={handleWorkItemUpdated}
                 canDeleteSprint={canDeleteSprint}
                 canCreateStory={canCreateStory}
-                canUpdateStory={canUpdateStory}
                 creatingIn={creatingIn}
                 setCreatingIn={setCreatingIn}
             />

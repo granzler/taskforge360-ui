@@ -12,6 +12,12 @@ interface QuickCreateItemProps {
     sprintId?: number;
     /** When set, the new work item is linked to this epic/parent. */
     parentId?: number;
+    /** Type of the created work item (defaults to Story). Use Task for subtasks. */
+    type?: WorkItemType;
+    /** Initial status of the created work item (defaults to Backlog). */
+    statusId?: number;
+    /** Overrides the generated input placeholder. */
+    placeholder?: string;
     /** Human readable context used for placeholders and aria-labels (e.g. "Sprint 1"). */
     label?: string;
     onCreated?: (workItem: WorkItemDto) => void;
@@ -31,6 +37,9 @@ export default function QuickCreateItem({
     projectId,
     sprintId,
     parentId,
+    type = WorkItemType.Story,
+    statusId = WorkItemStatus.Backlog,
+    placeholder,
     label,
     onCreated,
     onAdvanced,
@@ -54,11 +63,11 @@ export default function QuickCreateItem({
         if (!canSubmit || creatingRef.current) return;
 
         const dto: CreateWorkItemRequestDto = {
-            type: WorkItemType.Story,
+            type,
             title: title.trim(),
             projectId,
             priority: 2,
-            statusId: WorkItemStatus.Backlog,
+            statusId,
             concurrencyVersion: 1,
             sprintId,
             parentId,
@@ -86,7 +95,7 @@ export default function QuickCreateItem({
                     type="text"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    placeholder={`Add a work item${context}...`}
+                    placeholder={placeholder || `Add a work item${context}...`}
                     aria-label={`Work item title${context}`}
                     className="w-full pl-9 pr-3 py-3 text-sm rounded-lg border border-dashed border-border bg-background/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 focus:border-solid transition-all"
                     onKeyDown={e => {

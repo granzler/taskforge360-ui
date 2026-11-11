@@ -1,10 +1,10 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Loader2, Trash2 } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui';
 import { UpdateWorkItemRequestDto, WorkItemDto } from '@/domain/entities/WorkItem';
 import {
@@ -16,10 +16,14 @@ import {
 import { getEpicPriorityColor } from '@/lib/utils/colors';
 import { usePermission } from '@/features/auth/hooks/usePermission';
 import { useWorkItem } from '@/features/backlog/hooks/useWorkItem';
+import { useSubtasks } from '@/features/backlog/hooks/useSubtasks';
+import { useDeleteWorkItem } from '@/features/backlog/hooks/useDeleteWorkItem';
 import { useSprints } from '@/features/backlog/hooks/useSprints';
 import { useEpicsByProject } from '@/features/backlog/hooks/useEpicsByProject';
 import { useUpdateWorkItem } from '@/features/backlog/hooks/useUpdateWorkItem';
 import WorkItemForm from '@/features/backlog/components/WorkItemForm';
+import SubtaskList from '@/features/backlog/components/SubtaskList';
+import WorkItemBreadcrumb from '@/features/backlog/components/WorkItemBreadcrumb';
 
 interface PageProps {
     params: Promise<{ id: string }>;
@@ -29,11 +33,13 @@ const STATUS_BADGES: Record<number, string> = {
     [WorkItemStatus.Backlog]: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
     [WorkItemStatus.ToDo]: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
     [WorkItemStatus.InProgress]: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
-    [WorkItemStatus.InReview]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-    [WorkItemStatus.Testing]: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
-    [WorkItemStatus.Deploying]: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-    [WorkItemStatus.ReadyForTesting]: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
+    [WorkItemStatus.ReadyForReview]: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    [WorkItemStatus.InReview]: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+    [WorkItemStatus.NeedsRevision]: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+    [WorkItemStatus.ReadyForTest]: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
+    [WorkItemStatus.InTest]: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
     [WorkItemStatus.Done]: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+    [WorkItemStatus.Blocked]: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
 };
 
 export default function WorkItemDetailPage({ params }: PageProps) {
@@ -43,11 +49,17 @@ export default function WorkItemDetailPage({ params }: PageProps) {
     const queryClient = useQueryClient();
     const { hasScope } = usePermission();
     const canUpdate = hasScope('workitems:update');
+    const canDelete = hasScope('workitems:delete');
 
     const { data: workItem, isLoading, isError } = useWorkItem(workItemId);
     const projectId = workItem?.projectId;
     const { data: sprints = [] } = useSprints(projectId);
     const { data: epics = [] } = useEpicsByProject(projectId);
+    const { data: subtasks = [] } = useSubtasks(workItemId, {
+        enabled: !!workItem && workItem.type !== WorkItemType.Task,
+    });
+
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
 
     const { update, isLoading: isSaving } = useUpdateWorkItem({
         onSuccess: (item: WorkItemDto) => {
@@ -60,7 +72,22 @@ export default function WorkItemDetailPage({ params }: PageProps) {
         },
     });
 
+    const { remove, isLoading: isDeleting } = useDeleteWorkItem({
+        onSuccess: () => {
+            setConfirmingDelete(false);
+            if (projectId) {
+                queryClient.invalidateQueries({ queryKey: ['backlog-items', projectId] });
+                queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
+                queryClient.invalidateQueries({ queryKey: ['epics', projectId] });
+            }
+            router.push('/backlog');
+        },
+    });
+
     const handleBack = () => router.push('/backlog');
+
+    /** A work item with subtasks cannot be deleted (backend returns 409 `WorkItem.HasDependencies`). */
+    const hasSubtasks = subtasks.length > 0;
 
     const handleSubmit = async (data: {
         title: string;
@@ -137,16 +164,7 @@ export default function WorkItemDetailPage({ params }: PageProps) {
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
-            <Link
-                href="/backlog"
-                className="group flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary mb-8 transition-colors w-fit"
-                aria-label="Back to backlog"
-            >
-                <div className="p-1 rounded-md bg-transparent group-hover:bg-primary/10 transition-colors">
-                    <ArrowLeft size={16} />
-                </div>
-                Return to Backlog
-            </Link>
+            <WorkItemBreadcrumb workItem={workItem} />
 
             {/* Header */}
             <header className="mb-8">
@@ -176,13 +194,47 @@ export default function WorkItemDetailPage({ params }: PageProps) {
                     <span>{workItem.projectName || `Project #${workItem.projectId}`}</span>
                     <span aria-hidden="true">·</span>
                     <span>{workItem.sprintName || 'Backlog / No sprint'}</span>
-                    {workItem.parentTitle && (
-                        <>
-                            <span aria-hidden="true">·</span>
-                            <span>{workItem.parentTitle}</span>
-                        </>
-                    )}
                 </div>
+
+                {canDelete && (
+                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                        {confirmingDelete ? (
+                            <>
+                                <span className="text-xs text-red-600 dark:text-red-400">
+                                    {hasSubtasks
+                                        ? 'Delete the subtasks first.'
+                                        : `Delete "${workItem.title}"? This cannot be undone.`}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setConfirmingDelete(false)}
+                                    className="px-3 py-1.5 text-xs font-medium rounded-md border border-border hover:bg-accent transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => remove(workItem.id, workItem.title)}
+                                    disabled={hasSubtasks || isDeleting}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                                >
+                                    {isDeleting && <Loader2 size={12} className="animate-spin" />}
+                                    Confirm delete
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setConfirmingDelete(true)}
+                                disabled={hasSubtasks}
+                                title={hasSubtasks ? 'Delete the subtasks first' : undefined}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:border-red-900 dark:text-red-400"
+                            >
+                                <Trash2 size={13} /> Delete
+                            </button>
+                        )}
+                    </div>
+                )}
             </header>
 
             {/* Body */}
@@ -242,6 +294,13 @@ export default function WorkItemDetailPage({ params }: PageProps) {
                     </div>
                 )}
             </section>
+
+            {/* Subtasks (Tasks cannot have children) */}
+            {workItem.type !== WorkItemType.Task && (
+                <section className="bg-card border border-border/60 rounded-3xl p-6 md:p-8 shadow-sm mt-6">
+                    <SubtaskList parent={workItem} />
+                </section>
+            )}
         </div>
     );
 }

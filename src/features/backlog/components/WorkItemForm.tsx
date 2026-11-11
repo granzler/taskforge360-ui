@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FileText, AlignLeft, Hash, Flag, CheckSquare, FolderKanban, Loader2, Layers } from 'lucide-react';
-import { WorkItemStatus, WorkItemType, WORK_ITEM_STATUS_OPTIONS, WORK_ITEM_TYPE_OPTIONS } from '@/domain/types';
+import { WorkItemStatus, WorkItemType, WORK_ITEM_TYPE_OPTIONS } from '@/domain/types';
 import { Sprint } from '@/domain/entities/Sprint';
 import { EpicResponseDto } from '@/domain/entities/Epic';
 import { UserSearchResult } from '@/domain/entities/User';
-import { projectService } from '@/infrastructure/services/projectService';
 import { LabelSelector } from '@/features/labels/components/LabelSelector';
+import { useProjectUsers } from '@/features/projects/hooks/useProjectUsers';
+import { useWorkItemStatuses } from '../hooks/useWorkItemStatuses';
 import UserStoryAssigneeSelector from './UserStoryAssigneeSelector';
 
 interface WorkItemFormProps {
@@ -74,59 +75,30 @@ export default function WorkItemForm({
     const [selectedParentId, setSelectedParentId] = useState<number | undefined>(initialData?.parentId);
     const [selectedType, setSelectedType] = useState<WorkItemType>(initialData?.type || defaultType);
     const [assignedUser, setAssignedUser] = useState<UserSearchResult | null>(null);
-    const [isLoadingAssignee, setIsLoadingAssignee] = useState(!!initialData?.assignedTo);
+    const [isAssigneeEdited, setIsAssigneeEdited] = useState(false);
     const [selectedLabelIds, setSelectedLabelIds] = useState<number[]>(initialData?.labelIds || []);
+    const { options: statusOptions } = useWorkItemStatuses();
+    const { data: projectUsers = [], isLoading: isLoadingProjectUsers } = useProjectUsers(projectId);
 
-    useEffect(() => {
-        const assignedTo = initialData?.assignedTo;
-        if (!assignedTo) {
-            setIsLoadingAssignee(false);
-            return;
-        }
+    // The work item only stores the assignee's Keycloak id, so it is resolved
+    // against the project team. Until the user edits the field, the original id
+    // is preserved on submit even if it cannot be resolved.
+    const initialAssignedTo = initialData?.assignedTo;
+    const initialAssignee = initialAssignedTo
+        ? projectUsers.find(user => user.id === initialAssignedTo) ?? null
+        : null;
+    const assignee = isAssigneeEdited ? assignedUser : initialAssignee;
+    const isLoadingAssignee = !isAssigneeEdited && !!initialAssignedTo && isLoadingProjectUsers;
 
-        let cancelled = false;
+    const handleAssign = (user: UserSearchResult) => {
+        setIsAssigneeEdited(true);
+        setAssignedUser(user);
+    };
 
-        const loadUser = async () => {
-            try {
-                const projectUsersResult = await projectService.getProjectUsers(projectId);
-
-                if (cancelled) return;
-
-                let found = null;
-
-                if (projectUsersResult.success && projectUsersResult.data.length > 0) {
-                    found = projectUsersResult.data.find(u => u.id === assignedTo);
-                }
-
-                if (!found && assignedTo.length >= 3) {
-                    const searchResult = await projectService.searchUsers(assignedTo);
-                    if (!cancelled && searchResult.success) {
-                        found = searchResult.data.find(u => u.id === assignedTo);
-                    }
-                }
-
-                if (found) {
-                    setAssignedUser(found);
-                } else {
-                    setAssignedUser({ id: assignedTo, username: assignedTo, displayName: assignedTo, email: '' });
-                }
-            } catch {
-                if (!cancelled) {
-                    setAssignedUser({ id: assignedTo, username: assignedTo, displayName: assignedTo, email: '' });
-                }
-            } finally {
-                if (!cancelled) {
-                    setIsLoadingAssignee(false);
-                }
-            }
-        };
-
-        loadUser();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [initialData?.assignedTo, projectId]);
+    const handleUnassign = () => {
+        setIsAssigneeEdited(true);
+        setAssignedUser(null);
+    };
 
     const isValid = title.trim().length > 0;
     const isTask = selectedType === WorkItemType.Task;
@@ -146,7 +118,7 @@ export default function WorkItemForm({
             type: selectedType,
             projectId,
             priority: 2,
-            assignedTo: assignedUser?.id,
+            assignedTo: isAssigneeEdited ? assignedUser?.id : initialData?.assignedTo,
             labelIds: selectedLabelIds,
         });
     };
@@ -234,7 +206,7 @@ export default function WorkItemForm({
                         onChange={(e) => setStatusId(parseInt(e.target.value))}
                         className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
                     >
-                        {WORK_ITEM_STATUS_OPTIONS.map(opt => (
+                        {statusOptions.map(opt => (
                             <option key={opt.id} value={opt.id}>{opt.label}</option>
                         ))}
                     </select>
@@ -328,9 +300,9 @@ export default function WorkItemForm({
                     </div>
                 ) : (
                     <UserStoryAssigneeSelector
-                        assignedUser={assignedUser}
-                        onAssign={(user) => setAssignedUser(user)}
-                        onRemove={() => setAssignedUser(null)}
+                        assignedUser={assignee}
+                        onAssign={handleAssign}
+                        onRemove={handleUnassign}
                     />
                 )}
 

@@ -1,5 +1,5 @@
 import { Priority, Status, getWorkItemPriorityLabel } from '@/domain/types';
-import { CheckCircle2, CircleDashed, AlertCircle } from 'lucide-react';
+import { CheckCircle2, CircleDashed, AlertCircle, Ban, FlaskConical } from 'lucide-react';
 import { ReactNode } from 'react';
 
 export const getPriorityColor = (priority: Priority): string => {
@@ -14,10 +14,25 @@ export const getPriorityColor = (priority: Priority): string => {
 
 export const getStatusIcon = (status: Status): ReactNode => {
     switch (status) {
-        case 'Done': return <CheckCircle2 size={16} className="text-green-500" />;
-        case 'In Progress': return <CircleDashed size={16} className="text-blue-500 animate-spin-slow" />;
-        case 'Review': return <AlertCircle size={16} className="text-orange-500" />;
-        default: return <CircleDashed size={16} className="text-slate-400" />;
+        case 'Done':
+            return <CheckCircle2 size={16} className="text-green-500" />;
+        case 'Cancelled':
+            return <CircleDashed size={16} className="text-slate-400" />;
+        case 'In Progress':
+            return <CircleDashed size={16} className="text-blue-500 animate-spin-slow" />;
+        case 'Review':
+        case 'Ready for Review':
+        case 'In Review':
+            return <AlertCircle size={16} className="text-orange-500" />;
+        case 'Needs Revision':
+            return <AlertCircle size={16} className="text-red-500" />;
+        case 'Blocked':
+            return <Ban size={16} className="text-red-500" />;
+        case 'Ready for Test':
+        case 'In Test':
+            return <FlaskConical size={16} className="text-cyan-500" />;
+        default:
+            return <CircleDashed size={16} className="text-slate-400" />;
     }
 };
 

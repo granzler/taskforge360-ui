@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { UserSearchResult } from '@/domain/entities/User';
 import { projectService } from '@/infrastructure/services/projectService';
-import { Search, X, User as UserIcon, Loader2 } from 'lucide-react';
+import UserAvatar from '@/features/projects/components/UserAvatar';
+import { Search, X, Loader2 } from 'lucide-react';
 
 interface UserStoryAssigneeSelectorProps {
     assignedUser?: UserSearchResult | null;
@@ -76,11 +77,7 @@ export default function UserStoryAssigneeSelector({
 
             {assignedUser ? (
                 <div className="flex items-center gap-2 bg-secondary/50 border border-secondary px-3 py-2 rounded-lg">
-                    <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-primary">
-                            {(assignedUser.displayName || assignedUser.username || '?').charAt(0).toUpperCase()}
-                        </span>
-                    </div>
+                    <UserAvatar user={assignedUser} size="md" />
                     <span className="text-sm font-medium flex-1">
                         {assignedUser.displayName || assignedUser.username}
                     </span>
@@ -123,9 +120,7 @@ export default function UserStoryAssigneeSelector({
                                             onClick={() => handleSelectUser(user)}
                                             className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent transition-colors text-left"
                                         >
-                                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                                                <UserIcon size={14} className="text-primary" />
-                                            </div>
+                                            <UserAvatar user={user} size="md" />
                                             <div className="flex flex-col">
                                                 <span className="font-medium">{user.displayName || user.username}</span>
                                                 <span className="text-xs text-muted-foreground">@{user.username}</span>
