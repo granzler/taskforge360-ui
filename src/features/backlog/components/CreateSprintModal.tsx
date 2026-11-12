@@ -122,26 +122,32 @@ export default function CreateSprintModal({ projectId, projectName, sprintDurati
                                 <label htmlFor="sprint-start" className="block text-sm font-medium">
                                     <span className="flex items-center gap-1.5"><Calendar size={13} /> Start Date</span>
                                 </label>
-                                <input
-                                    id="sprint-start"
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => handleStartDateChange(e.target.value)}
-                                    className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-                                />
+                                <div className="relative">
+                                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                                    <input
+                                        id="sprint-start"
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => handleStartDateChange(e.target.value)}
+                                        className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="block text-sm font-medium">
                                     <span className="flex items-center gap-1.5"><Calendar size={13} /> End Date</span>
                                 </label>
-                                <input
-                                    id="sprint-end"
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-                                    title={`Suggested based on start date + ${sprintDurationDays} days (project setting)`}
-                                />
+                                <div className="relative">
+                                    <Calendar size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
+                                    <input
+                                        id="sprint-end"
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                                        title={`Suggested based on start date + ${sprintDurationDays} days (project setting)`}
+                                    />
+                                </div>
                             </div>
                         </div>
 

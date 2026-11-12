@@ -11,6 +11,7 @@ declare module "next-auth" {
         user: {
             id?: string
             username?: string
+            name?: string
             roles?: string[]
             scopes?: string[]
         } & DefaultSession["user"]
@@ -24,6 +25,7 @@ declare module "next-auth/jwt" {
         idToken?: string
         id?: string
         username?: string
+        name?: string
         roles?: string[]
         scopes?: string[]
     }

@@ -17,10 +17,10 @@ const navLinks = [
 export default function Navbar() {
     const pathname = usePathname();
     const [isAdminOpen, setIsAdminOpen] = useState(false);
-    const { hasRole, hasScope } = usePermission();
+    const { hasScope } = usePermission();
 
-    const canManageProjects = hasRole('system-admin') || hasRole('product-owner') || hasScope('projects:create');
-    const canManageLabels = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:create');
+    const canManageProjects = hasScope('projects:create');
+    const canManageLabels = hasScope('labels:create');
     const showAdminDropdown = canManageProjects || canManageLabels;
 
     const isAdminActive = pathname.startsWith('/admin') || pathname.startsWith('/projects');

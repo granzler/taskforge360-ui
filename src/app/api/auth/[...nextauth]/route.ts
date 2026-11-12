@@ -58,6 +58,15 @@ export const authOptions: AuthOptions = {
           id: user.id,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           username: (user as any).preferred_username || user.name,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          name: (user as any).name
+            || (decoded as any)?.name
+            || ((decoded as any)?.given_name && (decoded as any)?.family_name
+                ? `${(decoded as any).given_name} ${(decoded as any).family_name}`
+                : null)
+            || (decoded as any)?.given_name
+            || (decoded as any)?.preferred_username
+            || (user as any).preferred_username,
           roles,
           scopes,
         };
@@ -68,6 +77,7 @@ export const authOptions: AuthOptions = {
       session.accessToken = token.accessToken as string;
       session.user.id = token.id as string;
       session.user.username = token.username as string;
+      session.user.name = token.name as string;
       session.user.roles = (token.roles as string[]) || [];
       session.user.scopes = (token.scopes as string[]) || [];
 

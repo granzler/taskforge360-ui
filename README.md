@@ -1,21 +1,21 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Configuración de Variables de Entorno
+## Environment Variables
 
-Para ejecutar este proyecto, necesitarás configurar las siguientes variables de entorno. Puedes usar el archivo `.env.example` como plantilla:
+To run this project you need to configure the following environment variables. You can use `.env.example` as a template (note: the file is not committed to the repo, so create `.env` manually):
 
 ```bash
 cp .env.example .env
 ```
 
-### Variables Requeridas:
+### Required Variables:
 
-- `NEXT_PUBLIC_API_URL`: URL base del API backend (ej: `https://localhost:7157/`).
-- `KEYCLOAK_ID`: ID del cliente para la autenticación con Keycloak.
-- `KEYCLOAK_SECRET`: Secreto del cliente para Keycloak.
-- `KEYCLOAK_ISSUER`: URL del emisor (issuer) de Keycloak.
-- `NEXTAUTH_SECRET`: Una cadena aleatoria usada para cifrar tokens y cookies. Puedes generar una con `openssl rand -base64 32`.
-- `NEXTAUTH_URL`: La URL base de la aplicación (ej: `http://localhost:3000`).
+- `NEXT_PUBLIC_API_URL`: Base URL of the backend API (e.g. `https://localhost:7157/`).
+- `KEYCLOAK_ID`: Client ID for Keycloak authentication.
+- `KEYCLOAK_SECRET`: Client secret for Keycloak.
+- `KEYCLOAK_ISSUER`: Keycloak issuer URL.
+- `NEXTAUTH_SECRET`: Random string used to encrypt tokens and cookies. Generate one with `openssl rand -base64 32`.
+- `NEXTAUTH_URL`: Base URL of the application (e.g. `http://localhost:3000`).
 
 ## Getting Started
 
@@ -44,7 +44,7 @@ To learn more about Next.js, take a look at the following resources:
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+You can check out the [Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 

@@ -2,23 +2,20 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-    mockSubTasks
-} from '@/features/backlog/data/mockBacklogData';
 import { Sprint } from '@/domain/entities/Sprint';
-import { UserStoryDto } from '@/domain/entities/UserStory';
+import { WorkItemDto } from '@/domain/entities/WorkItem';
 import { EpicResponseDto } from '@/domain/entities/Epic';
-import { userStoryService } from '@/infrastructure/services/userStoryService';
+import { workItemService } from '@/infrastructure/services/workItemService';
 import { useProject } from '@/features/projects/context/ProjectContext';
 import { useSprints } from '@/features/backlog/hooks/useSprints';
 import { useEpicsByProject } from '@/features/backlog/hooks/useEpicsByProject';
-import { useBacklogStories } from '@/features/backlog/hooks/useBacklogStories';
+import { useBacklogItems } from '@/features/backlog/hooks/useBacklogItems';
 import { Layers, Calendar, Plus, FolderOpen } from 'lucide-react';
 import { SkeletonCard } from '@/components/ui';
 import SprintsTab from '@/features/backlog/components/SprintsTab';
 import EpicsTab from '@/features/backlog/components/EpicsTab';
 import CreateSprintModal from '@/features/backlog/components/CreateSprintModal';
-import CreateUserStoryModal from '@/features/backlog/components/CreateUserStoryModal';
+import CreateWorkItemPanel, { type CreateWorkItemTarget, focusCreateTrigger } from '@/features/backlog/components/CreateWorkItemPanel';
 import EpicModal from '@/features/backlog/components/EpicModal';
 import { toast } from 'react-hot-toast';
 import { notifyResult } from '@/lib/utils/notify';
@@ -26,34 +23,35 @@ import { usePermission } from '@/features/auth/hooks/usePermission';
 
 export default function BacklogPage() {
     const queryClient = useQueryClient();
-    const { hasRole, hasScope } = usePermission();
+    const { hasScope } = usePermission();
     const [activeTab, setActiveTab] = useState<'sprints' | 'epics'>('sprints');
     const { selectedProject } = useProject();
     const projectId = selectedProject?.id;
 
-    const canCreateSprint = hasRole('scrum-master') || hasRole('system-admin') || hasScope('sprints:create');
-    const canDeleteSprint = hasRole('scrum-master') || hasRole('system-admin') || hasScope('sprints:delete');
-    const canCreateStory = hasRole('developer') || hasRole('product-owner') || hasRole('system-admin') || hasScope('userstories:create');
-    const canUpdateStory = hasRole('developer') || hasRole('product-owner') || hasRole('system-admin') || hasScope('userstories:update');
-    const canCreateEpic = hasRole('product-owner') || hasRole('system-admin') || hasScope('epics:create');
-    const canUpdateEpic = hasRole('product-owner') || hasRole('system-admin') || hasScope('epics:update');
+    const canCreateSprint = hasScope('sprints:create');
+    const canDeleteSprint = hasScope('sprints:delete');
+    const canCreateStory = hasScope('workitems:create');
+    const canUpdateStory = hasScope('workitems:update');
+    const canCreateEpic = hasScope('epics:create');
+    const canUpdateEpic = hasScope('epics:update');
 
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreateEpicModal, setShowCreateEpicModal] = useState(false);
-    const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
+    const [creatingIn, setCreatingIn] = useState<CreateWorkItemTarget | null>(null);
     const [editingEpic, setEditingEpic] = useState<EpicResponseDto | null>(null);
 
     const { data: sprints = [], isLoading: isLoadingSprints } = useSprints(projectId);
     const { data: epics = [], isLoading: isLoadingEpics } = useEpicsByProject(projectId);
-    const { data: userStories = [], isLoading: isLoadingStories } = useBacklogStories(
+    const { data: workItems = [], isLoading: isLoadingWorkItems } = useBacklogItems(
         projectId,
-        sprints.map(s => s.id)
+        sprints.map(s => s.id),
+        'story'       // Fetch stories by default; could be configurable
     );
 
     const invalidateAll = () => {
         queryClient.invalidateQueries({ queryKey: ['sprints', projectId] });
         queryClient.invalidateQueries({ queryKey: ['epics', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['backlog-stories', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['backlog-items', projectId] });
     };
 
     const handleSprintCreated = (_sprint: Sprint) => {
@@ -66,14 +64,22 @@ export default function BacklogPage() {
         invalidateAll();
     };
 
-    const handleStoryCreated = (storyId?: number) => {
-        if (storyId) invalidateAll();
-        setShowCreateStoryModal(false);
+    const handleWorkItemCreated = (workItemId?: number) => {
+        if (workItemId) invalidateAll();
     };
 
-    const handleStoryUpdated = async (_updatedStory: UserStoryDto) => {
+    const handleQuickCreated = (_workItem: WorkItemDto) => {
         invalidateAll();
-        toast.success('User story updated!');
+    };
+
+    const closeTopCreatePanel = () => {
+        setCreatingIn(null);
+        focusCreateTrigger('top');
+    };
+
+    const handleWorkItemUpdated = async (_updatedWorkItem: WorkItemDto) => {
+        invalidateAll();
+        toast.success('Work item updated!');
     };
 
     const handleEpicCreated = (_epic: EpicResponseDto) => {
@@ -88,41 +94,41 @@ export default function BacklogPage() {
         toast.success('Epic updated!');
     };
 
-    const handleLinkStory = async (epicId: number, storyId: number): Promise<boolean> => {
+    const handleLinkStory = async (epicId: number, workItemId: number): Promise<boolean> => {
         try {
-            const currentStory = userStories.find(s => s.id === storyId);
-            if (!currentStory) {
-                toast.error('Story not found');
+            const currentItem = workItems.find(s => s.id === workItemId);
+            if (!currentItem) {
+                toast.error('Work item not found');
                 return false;
             }
 
-            const result = await userStoryService.update(storyId, {
-                title: currentStory.title,
-                description: currentStory.description,
-                statusId: currentStory.statusId,
-                priority: currentStory.priority,
-                projectId: currentStory.projectId,
-                storyPoints: currentStory.storyPoints,
-                acceptanceCriteria: currentStory.acceptanceCriteria,
-                sprintId: currentStory.sprintId,
-                epicId: epicId,
-                assignedTo: currentStory.assignedTo,
-                labelIds: currentStory.labels?.map(l => l.id),
-                concurrencyVersion: currentStory.concurrencyVersion,
+            const result = await workItemService.update(workItemId, {
+                title: currentItem.title,
+                description: currentItem.description,
+                statusId: currentItem.statusId,
+                priority: currentItem.priority,
+                projectId: currentItem.projectId,
+                storyPoints: currentItem.storyPoints,
+                acceptanceCriteria: currentItem.acceptanceCriteria,
+                sprintId: currentItem.sprintId,
+                parentId: epicId,
+                assignedTo: currentItem.assignedTo,
+                labelIds: currentItem.labels?.map(l => l.id),
+                concurrencyVersion: currentItem.concurrencyVersion,
             });
 
-            if (notifyResult(result, { success: 'Story linked to epic!' })) {
+            if (notifyResult(result, { success: 'Item linked to epic!' })) {
                 invalidateAll();
                 return true;
             }
             return false;
         } catch (err) {
-            console.error('Failed to link story:', err);
+            console.error('Failed to link work item:', err);
             return false;
         }
     };
 
-    const isLoading = isLoadingSprints || isLoadingEpics || isLoadingStories;
+    const isLoading = isLoadingSprints || isLoadingEpics || isLoadingWorkItems;
 
     const renderSprintsContent = () => {
         if (!selectedProject) {
@@ -154,15 +160,15 @@ export default function BacklogPage() {
                 projectId={selectedProject.id}
                 projectName={selectedProject.name}
                 sprints={sprints}
-                userStories={userStories}
-                subtasks={mockSubTasks}
+                workItems={workItems}
                 epics={epics}
                 onSprintDeleted={handleSprintDeleted}
-                onStoryCreated={handleStoryCreated}
-                onStoryUpdated={handleStoryUpdated}
+                onWorkItemCreated={handleWorkItemCreated}
+                onWorkItemUpdated={handleWorkItemUpdated}
                 canDeleteSprint={canDeleteSprint}
                 canCreateStory={canCreateStory}
-                canUpdateStory={canUpdateStory}
+                creatingIn={creatingIn}
+                setCreatingIn={setCreatingIn}
             />
         );
     };
@@ -177,7 +183,7 @@ export default function BacklogPage() {
                         </h1>
                         <p className="text-slate-500 mt-1">
                             {selectedProject
-                                ? `Sprints, epics and user stories for ${selectedProject.name}.`
+                                ? `Sprints, epics and work items for ${selectedProject.name}.`
                                 : 'Select a project from the top menu to get started.'}
                         </p>
                     </div>
@@ -194,12 +200,14 @@ export default function BacklogPage() {
                         )}
                         {canCreateStory && (
                             <button
-                                onClick={() => setShowCreateStoryModal(true)}
+                                data-create-trigger="top"
+                                onClick={() => setCreatingIn(prev => (prev?.scope === 'top' ? null : { scope: 'top' }))}
                                 disabled={!selectedProject}
+                                aria-expanded={creatingIn?.scope === 'top'}
                                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 <Plus size={18} />
-                                Create Story
+                                Create Item
                             </button>
                         )}
                     </div>
@@ -241,6 +249,23 @@ export default function BacklogPage() {
                     id={activeTab === 'sprints' ? 'tabpanel-sprints' : 'tabpanel-epics'}
                     aria-labelledby={activeTab === 'sprints' ? 'tab-sprints' : 'tab-epics'}
                 >
+                    {creatingIn?.scope === 'top' && selectedProject && (
+                        <div className="mb-6">
+                            <CreateWorkItemPanel
+                                projectId={selectedProject.id}
+                                sprints={sprints}
+                                epics={epics}
+                                subtitle={selectedProject.name}
+                                onClose={closeTopCreatePanel}
+                                onCreated={() => {
+                                    invalidateAll();
+                                    setCreatingIn(null);
+                                    focusCreateTrigger('top');
+                                }}
+                            />
+                        </div>
+                    )}
+
                     {activeTab === 'sprints' ? renderSprintsContent() : (
                         isLoadingEpics ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -250,14 +275,20 @@ export default function BacklogPage() {
                             </div>
                         ) : (
                             <EpicsTab
+                                projectId={selectedProject?.id ?? 0}
                                 epics={epics}
-                                userStories={userStories}
+                                workItems={workItems}
+                                sprints={sprints}
                                 onCreateEpic={() => setShowCreateEpicModal(true)}
                                 onEditEpic={setEditingEpic}
                                 onLinkStory={handleLinkStory}
+                                onWorkItemCreated={handleQuickCreated}
                                 canCreateEpic={canCreateEpic}
                                 canUpdateEpic={canUpdateEpic}
                                 canLinkStory={canUpdateStory}
+                                canCreateStory={canCreateStory}
+                                creatingIn={creatingIn}
+                                setCreatingIn={setCreatingIn}
                             />
                         )
                     )}
@@ -310,17 +341,6 @@ export default function BacklogPage() {
                     onClose={() => setEditingEpic(null)}
                     onCreated={() => {}}
                     onUpdated={handleEpicUpdated}
-                />
-            )}
-
-            {showCreateStoryModal && selectedProject && (
-                <CreateUserStoryModal
-                    projectId={selectedProject.id}
-                    projectName={selectedProject.name}
-                    sprints={sprints}
-                    epics={epics}
-                    onClose={() => setShowCreateStoryModal(false)}
-                    onCreated={handleStoryCreated}
                 />
             )}
         </>

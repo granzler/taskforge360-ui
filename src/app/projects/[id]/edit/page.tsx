@@ -24,8 +24,8 @@ export default function EditProjectPage({ params }: PageProps) {
 
     const router = useRouter();
     const { refreshProjects } = useProject();
-    const { hasRole, hasScope } = usePermission();
-    const canUpdate = hasRole('product-owner') || hasRole('system-admin') || hasScope('projects:update');
+    const { hasScope } = usePermission();
+    const canUpdate = hasScope('projects:update');
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 

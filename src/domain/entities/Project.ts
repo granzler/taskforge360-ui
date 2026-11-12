@@ -12,6 +12,7 @@ export interface ProjectUser {
 export interface WorkItem {
     id: number;
     title: string;
+    type?: string;            // "Story", "Bug", "Spike", "Task"
 }
 
 export interface Project {
@@ -53,21 +54,6 @@ export interface Epic {
     priority: Priority;
     status: Status;
     projectId: number;
-    assigneeId?: string;
-    concurrencyVersion: number;
-}
-
-
-
-export interface SubTask {
-    id: number;
-    title: string;
-    description: string;
-    priority: Priority;
-    status: Status;
-    startDate?: string;
-    endDate?: string;
-    userStoryId: number;
     assigneeId?: string;
     concurrencyVersion: number;
 }

@@ -15,15 +15,11 @@ export default function AdminLabelsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedLabels, setSelectedLabels] = useState<number[]>([]);
-    const { hasRole, hasScope } = usePermission();
+    const { hasScope } = usePermission();
 
-    const canCreate = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:create');
-    const canDelete = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:delete');
-    const canUpdate = hasRole('system-admin') || hasRole('product-owner') || hasRole('scrum-master') || hasScope('labels:update');
-
-    useEffect(() => {
-        fetchLabels();
-    }, []);
+    const canCreate = hasScope('labels:create');
+    const canDelete = hasScope('labels:delete');
+    const canUpdate = hasScope('labels:update');
 
     const fetchLabels = async () => {
         try {
@@ -38,6 +34,10 @@ export default function AdminLabelsPage() {
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchLabels();
+    }, []);
 
     const handleDelete = async () => {
         if (selectedLabels.length === 0) return;

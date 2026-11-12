@@ -17,8 +17,8 @@ import { notifyResult } from '@/lib/utils/notify';
 export default function CreateProjectPage() {
     const router = useRouter();
     const { refreshProjects } = useProject();
-    const { hasRole, hasScope } = usePermission();
-    const canCreate = hasRole('product-owner') || hasRole('system-admin') || hasScope('projects:create');
+    const { hasScope } = usePermission();
+    const canCreate = hasScope('projects:create');
 
     if (!canCreate) {
         return (

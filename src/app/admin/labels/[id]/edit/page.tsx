@@ -18,9 +18,9 @@ export default function EditLabelPage({ params }: PageProps) {
     const { id } = use(params);
     const labelId = parseInt(id);
     const router = useRouter();
-    const { hasRole, hasScope } = usePermission();
-    const canUpdate = hasRole('scrum-master') || hasRole('product-owner') || hasRole('system-admin') || hasScope('labels:update');
-    const canDelete = hasRole('scrum-master') || hasRole('product-owner') || hasRole('system-admin') || hasScope('labels:delete');
+    const { hasScope } = usePermission();
+    const canUpdate = hasScope('labels:update');
+    const canDelete = hasScope('labels:delete');
 
     const [label, setLabel] = useState<GlobalLabelDto | null>(null);
     const [formData, setFormData] = useState<UpdateLabelRequestDto | null>(null);
