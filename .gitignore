@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# security gate reports
+/.security/
+
 # next.js
 /.next/
 /out/

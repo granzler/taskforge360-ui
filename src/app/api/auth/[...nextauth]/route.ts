@@ -1,14 +1,55 @@
 import NextAuth from "next-auth";
 import { AuthOptions } from "next-auth";
 import KeycloakProvider from "next-auth/providers/keycloak";
+import type { NextRequest } from "next/server";
 
-function decodeJwt(token: string) {
+const REQUIRED_AUTH_ENV = [
+  "NEXTAUTH_SECRET",
+  "KEYCLOAK_ID",
+  "KEYCLOAK_SECRET",
+  "KEYCLOAK_ISSUER",
+] as const;
+
+/**
+ * Fail closed when production is missing the auth secrets. Running this per
+ * request (instead of at module load) keeps `next build` working in CI images
+ * that only inject secrets at runtime.
+ */
+function assertAuthEnv() {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const missing = REQUIRED_AUTH_ENV.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required auth environment variables: ${missing.join(", ")}`
+    );
+  }
+}
+
+/** Subset of the Keycloak access-token claims consumed by the JWT callback. */
+interface KeycloakClaims {
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  preferred_username?: string;
+  scope?: string;
+  realm_access?: { roles?: string[] };
+  resource_access?: Record<string, { roles?: string[] } | undefined>;
+}
+
+/** Profile fields Keycloak adds to the OIDC user on top of next-auth's User. */
+interface KeycloakUserProfile {
+  name?: string | null;
+  preferred_username?: string | null;
+}
+
+function decodeJwt(token: string): KeycloakClaims | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     const payload = parts[1];
     const decoded = Buffer.from(payload, 'base64').toString('utf-8');
-    return JSON.parse(decoded);
+    return JSON.parse(decoded) as KeycloakClaims;
   } catch (error) {
     console.error('Error decoding JWT token:', error);
     return null;
@@ -16,6 +57,9 @@ function decodeJwt(token: string) {
 }
 
 export const authOptions: AuthOptions = {
+  // Force the __Secure- cookie prefix in production instead of inferring it
+  // from NEXTAUTH_URL.
+  useSecureCookies: process.env.NODE_ENV === "production",
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_ID!,
@@ -42,12 +86,13 @@ export const authOptions: AuthOptions = {
         const idToken = account.id_token;
         const decoded = accessToken ? decodeJwt(accessToken) : null;
         const clientId = process.env.KEYCLOAK_ID || 'taskforge360-client';
-        
+        const profile = user as KeycloakUserProfile;
+
         // Extract realm roles and client roles to cover both configurations
         const realmRoles = decoded?.realm_access?.roles || [];
         const clientRoles = decoded?.resource_access?.[clientId]?.roles || [];
         const roles = Array.from(new Set([...realmRoles, ...clientRoles]));
-        
+
         // Extract OIDC scopes (usually space-separated)
         const scopes = decoded?.scope?.split(' ') || [];
 
@@ -56,17 +101,16 @@ export const authOptions: AuthOptions = {
           accessToken,
           idToken,
           id: user.id,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          username: (user as any).preferred_username || user.name,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name: (user as any).name
-            || (decoded as any)?.name
-            || ((decoded as any)?.given_name && (decoded as any)?.family_name
-                ? `${(decoded as any).given_name} ${(decoded as any).family_name}`
+          username: profile.preferred_username || user.name || undefined,
+          name: profile.name
+            || decoded?.name
+            || (decoded?.given_name && decoded?.family_name
+                ? `${decoded.given_name} ${decoded.family_name}`
                 : null)
-            || (decoded as any)?.given_name
-            || (decoded as any)?.preferred_username
-            || (user as any).preferred_username,
+            || decoded?.given_name
+            || decoded?.preferred_username
+            || profile.preferred_username
+            || undefined,
           roles,
           scopes,
         };
@@ -106,5 +150,16 @@ export const authOptions: AuthOptions = {
   },
 };
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+const nextAuthHandler = NextAuth(authOptions);
+
+type AuthRouteContext = { params: Promise<{ nextauth: string[] }> };
+
+export async function GET(request: NextRequest, context: AuthRouteContext) {
+  assertAuthEnv();
+  return nextAuthHandler(request, context);
+}
+
+export async function POST(request: NextRequest, context: AuthRouteContext) {
+  assertAuthEnv();
+  return nextAuthHandler(request, context);
+}

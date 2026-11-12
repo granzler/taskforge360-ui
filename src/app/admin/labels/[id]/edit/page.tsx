@@ -17,6 +17,8 @@ interface PageProps {
 export default function EditLabelPage({ params }: PageProps) {
     const { id } = use(params);
     const labelId = parseInt(id);
+    // `parseInt` returns NaN for malformed ids; keep the original falsy check.
+    const hasValidId = Boolean(labelId);
     const router = useRouter();
     const { hasScope } = usePermission();
     const canUpdate = hasScope('labels:update');
@@ -24,16 +26,12 @@ export default function EditLabelPage({ params }: PageProps) {
 
     const [label, setLabel] = useState<GlobalLabelDto | null>(null);
     const [formData, setFormData] = useState<UpdateLabelRequestDto | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(hasValidId);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!labelId) {
-            setError('Invalid label ID.');
-            setIsLoading(false);
-            return;
-        }
+        if (!labelId) return;
 
         const fetchLabel = async () => {
             try {
@@ -128,7 +126,7 @@ export default function EditLabelPage({ params }: PageProps) {
                     </div>
                 ) : (
                     <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600">
-                        {error || 'Label not found.'}
+                        {error || (hasValidId ? 'Label not found.' : 'Invalid label ID.')}
                     </div>
                 )}
             </div>

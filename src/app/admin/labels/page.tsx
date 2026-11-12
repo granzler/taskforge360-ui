@@ -36,7 +36,12 @@ export default function AdminLabelsPage() {
     };
 
     useEffect(() => {
-        fetchLabels();
+        // The loader is async and defined inside the effect so its setState
+        // calls never run synchronously during the effect body.
+        const loadInitialLabels = async () => {
+            await fetchLabels();
+        };
+        void loadInitialLabels();
     }, []);
 
     const handleDelete = async () => {
