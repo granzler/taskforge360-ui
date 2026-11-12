@@ -14,10 +14,14 @@ npm run lint           # ESLint (flat config)
 npx vitest run         # run tests once (CI/verification)
 npx vitest run src/features/backlog/hooks/__tests__/useCreateWorkItem.test.ts   # single test
 npx vitest --ui        # Vitest UI
+npm run security       # OWASP Top 10 gate (Semgrep + npm audit + repo checks)
 ```
 
 - `npm run test` leaves Vitest in **watch mode**; use `npx vitest run` to verify.
-- Verification order before committing: `npm run lint` → `npx tsc --noEmit` → `npx vitest run`.
+- Verification order before committing: `npm run lint` → `npx tsc --noEmit` → `npx vitest run` → `npm run security`.
+- **`npm run security` requires `semgrep` on `PATH`** (`pipx install semgrep`). It writes
+  `.security/report.json` (gitignored) and blocks the push on failure. If it fails, load the
+  `security-triage` skill (or run `/security-triage`) before retrying; see `SECURITY.md`.
 - **`npm run lint` already fails on main**: 8 pre-existing `@typescript-eslint/no-explicit-any`
   errors in `src/app/api/auth/[...nextauth]/route.ts` (plus warnings). Don't "fix" them in
   unrelated changes; just make sure you don't add new errors.
@@ -91,11 +95,15 @@ npx vitest --ui        # Vitest UI
   - `project-workflows` — feature/component/endpoint workflows, verification, branch lifecycle
   - `subagent-dispatch` — templates for delegating work to subagents
   - `ui-ux-pro-max` — design intelligence for UI/UX review and creation
+  - `security-triage` — classify OWASP/Semgrep findings as true/false positives, fix them,
+    and record justified suppressions in `SECURITY.md`
+- **Commands** — `.opencode/commands/security-triage.md` exposes `/security-triage`.
 - **Hook plugin** — `.opencode/plugins/verify-before-push/index.ts` (auto-loaded, typed via
   the `@opencode/plugin` devDependency): rewrites any `git push` issued by the shell tool
-  into `npx tsc --noEmit && npx vitest run && git push ...`, so pushes only happen when
-  typecheck and tests are green. Lint is excluded on purpose until its pre-existing
-  baseline is fixed; edit the `VERIFY` constant in the plugin to change the chain.
+  into `npx tsc --noEmit && npx vitest run && npm run security && git push ...`, so pushes
+  only happen when typecheck, tests and the OWASP gate are green. Lint is excluded on
+  purpose until its pre-existing baseline is fixed; edit the `VERIFY` constant in the
+  plugin to change the chain.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

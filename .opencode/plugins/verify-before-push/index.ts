@@ -8,8 +8,12 @@ import { Plugin } from "@opencode/plugin";
  * pre-existing failure baseline (8 `no-explicit-any` errors in
  * src/app/api/auth/[...nextauth]/route.ts), so gating on it would block every
  * push. Add `npm run lint && ` once that baseline is clean.
+ *
+ * `npm run security` is the OWASP Top 10 gate (Semgrep + npm audit + repo
+ * checks). When it fails, the push never runs and the failure points the agent
+ * at the `security-triage` skill.
  */
-const VERIFY = "npx tsc --noEmit && npx vitest run";
+const VERIFY = "npx tsc --noEmit && npx vitest run && npm run security";
 
 /** Matches `git push` at the start of the command or after &&, ||, or ; */
 const PUSH_PATTERN = /(^|&&|\|\||;)\s*git\s+push\b/;
@@ -23,7 +27,7 @@ export default Plugin.define({
 
       // Prefix the chain so the push only runs when verification is green.
       event.command = `${VERIFY} && ${event.command}`;
-      event.timeout = Math.max(event.timeout, 300_000);
+      event.timeout = Math.max(event.timeout, 600_000);
     });
   },
 });

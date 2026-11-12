@@ -1,6 +1,30 @@
 import NextAuth from "next-auth";
 import { AuthOptions } from "next-auth";
 import KeycloakProvider from "next-auth/providers/keycloak";
+import type { NextRequest } from "next/server";
+
+const REQUIRED_AUTH_ENV = [
+  "NEXTAUTH_SECRET",
+  "KEYCLOAK_ID",
+  "KEYCLOAK_SECRET",
+  "KEYCLOAK_ISSUER",
+] as const;
+
+/**
+ * Fail closed when production is missing the auth secrets. Running this per
+ * request (instead of at module load) keeps `next build` working in CI images
+ * that only inject secrets at runtime.
+ */
+function assertAuthEnv() {
+  if (process.env.NODE_ENV !== "production") return;
+
+  const missing = REQUIRED_AUTH_ENV.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required auth environment variables: ${missing.join(", ")}`
+    );
+  }
+}
 
 function decodeJwt(token: string) {
   try {
@@ -16,6 +40,9 @@ function decodeJwt(token: string) {
 }
 
 export const authOptions: AuthOptions = {
+  // Force the __Secure- cookie prefix in production instead of inferring it
+  // from NEXTAUTH_URL.
+  useSecureCookies: process.env.NODE_ENV === "production",
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_ID!,
@@ -106,5 +133,16 @@ export const authOptions: AuthOptions = {
   },
 };
 
-const handler = NextAuth(authOptions);
-export { handler as GET, handler as POST };
+const nextAuthHandler = NextAuth(authOptions);
+
+type AuthRouteContext = { params: Promise<{ nextauth: string[] }> };
+
+export async function GET(request: NextRequest, context: AuthRouteContext) {
+  assertAuthEnv();
+  return nextAuthHandler(request, context);
+}
+
+export async function POST(request: NextRequest, context: AuthRouteContext) {
+  assertAuthEnv();
+  return nextAuthHandler(request, context);
+}
