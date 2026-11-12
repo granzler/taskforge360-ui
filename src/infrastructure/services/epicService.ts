@@ -2,7 +2,6 @@ import api from '../api/axios';
 import { Result } from '@/domain/types';
 import { handleApiCall } from '../api/apiHelper';
 import { EpicResponseDto, CreateEpicDto, UpdateEpicDto } from '@/domain/entities/Epic';
-import { WorkItemDto } from '@/domain/entities/WorkItem';
 
 export type { CreateEpicDto, UpdateEpicDto };
 

@@ -22,12 +22,12 @@ npm run security       # OWASP Top 10 gate (Semgrep + npm audit + repo checks)
 - **`npm run security` requires `semgrep` on `PATH`** (`pipx install semgrep`). It writes
   `.security/report.json` (gitignored) and blocks the push on failure. If it fails, load the
   `security-triage` skill (or run `/security-triage`) before retrying; see `SECURITY.md`.
-- **`npm run lint` is clean of errors** (6 pre-existing warnings, e.g. unused imports and
-  `set-state-in-effect`). It now gates the push, so don't add new errors or warnings.
-- Since `eslint-config-next@16.4.0`, `react-hooks/set-state-in-effect` is downgraded to
-  `warn` in `eslint.config.mjs`: the existing "reset state from props in an effect" patterns
-  predate the rule. New code should avoid that pattern.
-- `tsc --noEmit` and all tests (14 files, 84 tests) pass clean on main.
+- **`npm run lint` is clean** (0 errors, 0 warnings) and gates the push, so don't add
+  errors or warnings.
+- `react-hooks/set-state-in-effect` is `warn` in `eslint.config.mjs` (not an error), but the
+  codebase is clean of it: initialize state lazily (`useState(() => ...)`) instead of syncing
+  props in an effect, and keep async loaders inside the effect. Don't reintroduce it.
+- `tsc --noEmit` and all tests (15 files, 86 tests) pass clean on main.
 - **TypeScript is pinned to 6.x**: `typescript-eslint` (bundled by `eslint-config-next`) does
   not support TS 7 yet and `npm run lint` fails to start. Don't bump to 7 until upstream
   support lands.

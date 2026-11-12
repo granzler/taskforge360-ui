@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreateProjectDto, Project, UpdateProjectDto } from '@/domain/entities/Project';
 import { UserSearchResult } from '@/domain/entities/User';
@@ -13,37 +13,37 @@ interface ProjectFormProps {
     isOrdering?: boolean;
 }
 
+type ProjectFormData = Omit<CreateProjectDto, 'concurrencyVersion'> & { concurrencyVersion?: number };
+
+function toFormData(project?: Project): ProjectFormData {
+    if (!project) {
+        return { name: '', description: '', sprintDurationDays: 14 };
+    }
+
+    return {
+        name: project.name,
+        description: project.description,
+        sprintDurationDays: project.sprintDurationDays,
+        concurrencyVersion: project.concurrencyVersion,
+    };
+}
+
+function toSelectedUsers(project?: Project): UserSearchResult[] {
+    return (project?.projectUsers ?? []).map(pu => ({
+        id: pu.userId,
+        username: pu.userName || '', // Fallback or assume populated
+        displayName: pu.displayName || pu.userName || 'Unknown User',
+        email: pu.email || ''
+    }));
+}
+
 export default function ProjectForm({ initialData, onSubmit }: ProjectFormProps) {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [formData, setFormData] = useState<Omit<CreateProjectDto, 'concurrencyVersion'> & { concurrencyVersion?: number }>({
-        name: '',
-        description: '',
-        sprintDurationDays: 14,
-    });
-    const [selectedUsers, setSelectedUsers] = useState<UserSearchResult[]>([]);
-
-    useEffect(() => {
-        if (initialData) {
-            setFormData({
-                name: initialData.name,
-                description: initialData.description,
-                sprintDurationDays: initialData.sprintDurationDays,
-                concurrencyVersion: initialData.concurrencyVersion,
-            });
-
-            // Populate selected users if available in initialData
-            if (initialData.projectUsers) {
-                const initialUsers: UserSearchResult[] = initialData.projectUsers.map(pu => ({
-                    id: pu.userId,
-                    username: pu.userName || '', // Fallback or assume populated
-                    displayName: pu.displayName || pu.userName || 'Unknown User',
-                    email: pu.email || ''
-                }));
-                setSelectedUsers(initialUsers);
-            }
-        }
-    }, [initialData]);
+    // The form is mounted once the project is loaded, so the initial data can be
+    // used directly instead of syncing it from props in an effect.
+    const [formData, setFormData] = useState<ProjectFormData>(() => toFormData(initialData));
+    const [selectedUsers, setSelectedUsers] = useState<UserSearchResult[]>(() => toSelectedUsers(initialData));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

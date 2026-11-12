@@ -39,7 +39,12 @@ export default function ProjectsPage() {
     };
 
     useEffect(() => {
-        fetchProjects();
+        // The loader is async and defined inside the effect so its setState
+        // calls never run synchronously during the effect body.
+        const loadInitialProjects = async () => {
+            await fetchProjects();
+        };
+        void loadInitialProjects();
     }, []);
 
     const handleDelete = async () => {

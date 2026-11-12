@@ -63,8 +63,9 @@ export default function UserInfo() {
       const logoutUrl = `${session.logoutUrl}&post_logout_redirect_uri=${encodeURIComponent(redirectUri)}`;
       // Clear NextAuth session locally without redirecting automatically
       await signOut({ redirect: false });
-      // Perform manual redirection to Keycloak logout URL to clear SSO session
-      window.location.href = logoutUrl;
+      // Perform manual redirection to Keycloak logout URL to clear SSO session.
+      // `replace` keeps the signed-out app page out of the history.
+      window.location.replace(logoutUrl);
     } else {
       await signOut({ callbackUrl: '/login' });
     }
