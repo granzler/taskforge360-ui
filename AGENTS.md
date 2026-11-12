@@ -24,7 +24,14 @@ npx vitest --ui        # Vitest UI
 - Since `eslint-config-next@16.4.0`, `react-hooks/set-state-in-effect` is downgraded to
   `warn` in `eslint.config.mjs`: the existing "reset state from props in an effect" patterns
   predate the rule. New code should avoid that pattern.
-- `tsc --noEmit` and all 41 tests (5 files) pass clean on main.
+- `tsc --noEmit` and all tests (13 files, 81 tests) pass clean on main.
+- **TypeScript is pinned to 6.x**: `typescript-eslint` (bundled by `eslint-config-next`) does
+  not support TS 7 yet and `npm run lint` fails to start. Don't bump to 7 until upstream
+  support lands.
+- `@auth/core` is an optional peer of `next-auth` v4 (types only). It's overridden to
+  `^0.41.3` (`"@auth/core": "$@auth/core"` in `overrides`) to clear a critical advisory;
+  `next-auth` still works because it doesn't import it at runtime. Don't drop the override
+  without checking `npm audit --omit=dev`.
 - There is no CI (`.github/` does not exist).
 
 ## Environment
