@@ -22,13 +22,12 @@ npm run security       # OWASP Top 10 gate (Semgrep + npm audit + repo checks)
 - **`npm run security` requires `semgrep` on `PATH`** (`pipx install semgrep`). It writes
   `.security/report.json` (gitignored) and blocks the push on failure. If it fails, load the
   `security-triage` skill (or run `/security-triage`) before retrying; see `SECURITY.md`.
-- **`npm run lint` already fails on main**: 8 pre-existing `@typescript-eslint/no-explicit-any`
-  errors in `src/app/api/auth/[...nextauth]/route.ts` (plus warnings). Don't "fix" them in
-  unrelated changes; just make sure you don't add new errors.
+- **`npm run lint` is clean of errors** (6 pre-existing warnings, e.g. unused imports and
+  `set-state-in-effect`). It now gates the push, so don't add new errors or warnings.
 - Since `eslint-config-next@16.4.0`, `react-hooks/set-state-in-effect` is downgraded to
   `warn` in `eslint.config.mjs`: the existing "reset state from props in an effect" patterns
   predate the rule. New code should avoid that pattern.
-- `tsc --noEmit` and all tests (13 files, 81 tests) pass clean on main.
+- `tsc --noEmit` and all tests (14 files, 84 tests) pass clean on main.
 - **TypeScript is pinned to 6.x**: `typescript-eslint` (bundled by `eslint-config-next`) does
   not support TS 7 yet and `npm run lint` fails to start. Don't bump to 7 until upstream
   support lands.
@@ -100,10 +99,9 @@ npm run security       # OWASP Top 10 gate (Semgrep + npm audit + repo checks)
 - **Commands** — `.opencode/commands/security-triage.md` exposes `/security-triage`.
 - **Hook plugin** — `.opencode/plugins/verify-before-push/index.ts` (auto-loaded, typed via
   the `@opencode/plugin` devDependency): rewrites any `git push` issued by the shell tool
-  into `npx tsc --noEmit && npx vitest run && npm run security && git push ...`, so pushes
-  only happen when typecheck, tests and the OWASP gate are green. Lint is excluded on
-  purpose until its pre-existing baseline is fixed; edit the `VERIFY` constant in the
-  plugin to change the chain.
+  into `npm run lint && npx tsc --noEmit && npx vitest run && npm run security && git push ...`,
+  so pushes only happen when lint, typecheck, tests and the OWASP gate are green. Edit the
+  `VERIFY` constant in the plugin to change the chain.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

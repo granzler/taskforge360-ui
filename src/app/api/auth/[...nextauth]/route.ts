@@ -26,13 +26,30 @@ function assertAuthEnv() {
   }
 }
 
-function decodeJwt(token: string) {
+/** Subset of the Keycloak access-token claims consumed by the JWT callback. */
+interface KeycloakClaims {
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  preferred_username?: string;
+  scope?: string;
+  realm_access?: { roles?: string[] };
+  resource_access?: Record<string, { roles?: string[] } | undefined>;
+}
+
+/** Profile fields Keycloak adds to the OIDC user on top of next-auth's User. */
+interface KeycloakUserProfile {
+  name?: string | null;
+  preferred_username?: string | null;
+}
+
+function decodeJwt(token: string): KeycloakClaims | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     const payload = parts[1];
     const decoded = Buffer.from(payload, 'base64').toString('utf-8');
-    return JSON.parse(decoded);
+    return JSON.parse(decoded) as KeycloakClaims;
   } catch (error) {
     console.error('Error decoding JWT token:', error);
     return null;
@@ -69,12 +86,13 @@ export const authOptions: AuthOptions = {
         const idToken = account.id_token;
         const decoded = accessToken ? decodeJwt(accessToken) : null;
         const clientId = process.env.KEYCLOAK_ID || 'taskforge360-client';
-        
+        const profile = user as KeycloakUserProfile;
+
         // Extract realm roles and client roles to cover both configurations
         const realmRoles = decoded?.realm_access?.roles || [];
         const clientRoles = decoded?.resource_access?.[clientId]?.roles || [];
         const roles = Array.from(new Set([...realmRoles, ...clientRoles]));
-        
+
         // Extract OIDC scopes (usually space-separated)
         const scopes = decoded?.scope?.split(' ') || [];
 
@@ -83,17 +101,16 @@ export const authOptions: AuthOptions = {
           accessToken,
           idToken,
           id: user.id,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          username: (user as any).preferred_username || user.name,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name: (user as any).name
-            || (decoded as any)?.name
-            || ((decoded as any)?.given_name && (decoded as any)?.family_name
-                ? `${(decoded as any).given_name} ${(decoded as any).family_name}`
+          username: profile.preferred_username || user.name || undefined,
+          name: profile.name
+            || decoded?.name
+            || (decoded?.given_name && decoded?.family_name
+                ? `${decoded.given_name} ${decoded.family_name}`
                 : null)
-            || (decoded as any)?.given_name
-            || (decoded as any)?.preferred_username
-            || (user as any).preferred_username,
+            || decoded?.given_name
+            || decoded?.preferred_username
+            || profile.preferred_username
+            || undefined,
           roles,
           scopes,
         };
